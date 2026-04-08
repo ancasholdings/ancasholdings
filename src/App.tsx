@@ -1,0 +1,441 @@
+import { motion } from "motion/react";
+import { 
+  Building2, 
+  Users, 
+  TrendingUp, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  ChevronRight,
+  Menu,
+  X,
+  ArrowRight
+} from "lucide-react";
+import { useState, useEffect } from "react";
+
+// --- Components ---
+
+const Logo = ({ className = "" }: { className?: string }) => {
+  const brandBlue = "#00264d";
+  const brandGold = "#d4a017";
+  
+  return (
+    <div className={`flex items-center gap-4 group cursor-pointer ${className}`}>
+      <div className="relative h-12 md:h-16 flex items-center justify-center transition-all duration-500 transform group-hover:scale-105">
+        <svg viewBox="0 0 140 100" className="h-full w-auto drop-shadow-sm">
+          {/* Buildings Group */}
+          <g className="transition-all duration-500">
+            {/* Left Building */}
+            <path 
+              d="M35,45 L35,80 L50,80 L50,40 Z" 
+              fill={brandBlue} 
+              className="transition-all duration-500"
+            />
+            <rect x="40" y="55" width="4" height="6" fill="white" opacity="0.6" />
+            
+            {/* Middle Building - Side (Perspective) */}
+            <path 
+              d="M70,25 L70,80 L85,80 L85,35 Z" 
+              fill={brandBlue} 
+              className="transition-all duration-500"
+              opacity="0.9"
+            />
+            
+            {/* Middle Building - Front (Gold) */}
+            <path 
+              d="M50,35 L50,80 L70,80 L70,25 Z" 
+              fill={brandGold} 
+              className="transition-all duration-500"
+            />
+            <rect x="57" y="45" width="6" height="8" fill="white" opacity="0.6" />
+            
+            {/* Right Building */}
+            <path 
+              d="M85,45 L85,80 L100,80 L100,40 Z" 
+              fill={brandBlue} 
+              className="transition-all duration-500"
+            />
+            <rect x="91" y="55" width="4" height="6" fill="white" opacity="0.6" />
+          </g>
+
+          {/* Wavy Line */}
+          <path 
+            d="M20,85 Q70,75 120,85" 
+            fill="none" 
+            stroke={brandBlue} 
+            strokeWidth="4" 
+            strokeLinecap="round"
+            className="transition-all duration-500"
+          />
+        </svg>
+      </div>
+      
+      <div className="flex flex-col transition-all duration-500">
+        <span className={`text-xl md:text-2xl font-sans font-black tracking-tight leading-none transition-all duration-500 text-[#00264d]`}>
+          ANCAS
+        </span>
+        <span className={`text-lg md:text-xl font-sans font-black tracking-tight leading-none transition-all duration-500 text-[#00264d]`}>
+          HOLDINGS
+        </span>
+        <span className={`text-[7px] md:text-[8px] font-sans font-bold tracking-[0.2em] uppercase mt-1 transition-all duration-500 text-[#00264d]/60`}>
+          Investments & Asset Management
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const Navbar = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const navLinks = [
+    { name: "Home", href: "#home" },
+    { name: "About", href: "#about" },
+  ];
+
+  return (
+    <nav className={`fixed w-full z-50 transition-all duration-500 ${isScrolled ? "bg-white/95 backdrop-blur-md shadow-lg py-3" : "bg-stone-50/80 backdrop-blur-sm py-6"}`}>
+      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+        <Logo />
+
+        {/* Desktop Nav */}
+        <div className="hidden md:flex items-center gap-8">
+          {navLinks.map((link) => (
+            <a
+              key={link.name}
+              href={link.href}
+              className={`text-sm font-medium tracking-widest uppercase transition-colors hover:text-accent text-primary`}
+            >
+              {link.name}
+            </a>
+          ))}
+          <a
+            href="#contact"
+            className={`px-6 py-2 text-sm font-medium uppercase tracking-widest transition-all border border-primary text-primary hover:bg-primary hover:text-white`}
+          >
+            Contact/Submit a Property Lead
+          </a>
+        </div>
+
+        {/* Mobile Toggle */}
+        <button 
+          className="md:hidden"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? (
+            <X className="text-primary" />
+          ) : (
+            <Menu className="text-primary" />
+          )}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-full left-0 w-full bg-white shadow-xl py-6 px-6 flex flex-col gap-4 md:hidden"
+        >
+          {navLinks.map((link) => (
+            <a
+              key={link.name}
+              href={link.href}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-lg font-serif text-primary border-b border-slate-100 pb-2"
+            >
+              {link.name}
+            </a>
+          ))}
+        </motion.div>
+      )}
+    </nav>
+  );
+};
+
+const Hero = () => {
+  return (
+    <section id="home" className="relative min-h-screen flex items-center bg-stone-50 scroll-mt-32 overflow-hidden">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pt-32 md:pt-40 grid lg:grid-cols-2 gap-12 items-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <span className="text-accent font-medium tracking-[0.3em] uppercase text-sm mb-4 block">
+            Strategic Real Estate Investment
+          </span>
+          <h1 className="text-5xl md:text-7xl text-primary leading-tight mb-8">
+            Building Value Through <span className="italic font-light">Visionary</span> Management
+          </h1>
+          <p className="text-primary/80 text-lg md:text-xl mb-6 font-light leading-relaxed">
+            Ancas Holdings is a premier real estate investment and asset management group dedicated to acquiring and optimizing mid-market multi-family properties across Chicago's North and Northwest neighborhoods and suburban communities.
+          </p>
+          <p className="text-primary/70 text-base md:text-lg mb-10 font-light leading-relaxed">
+            We specialize in identifying high-potential assets where strategic management and thoughtful capital improvements can drive long-term value for our investors. Beyond the bottom line, our mission is rooted in the belief that quality housing is a cornerstone of a thriving neighborhood; by revitalizing these properties, we aim to elevate living standards for our residents and contribute to the overall strength and vibrancy of the communities we serve.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <a 
+              href="#about" 
+              className="bg-primary text-white px-8 py-4 text-sm font-medium uppercase tracking-widest hover:bg-primary/90 transition-all flex items-center justify-center"
+            >
+              Our Strategy
+            </a>
+            <a 
+              href="#contact" 
+              className="border border-primary text-primary px-8 py-4 text-sm font-medium uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center justify-center"
+            >
+              Get in Touch
+            </a>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 1.2, ease: "easeOut" }}
+          className="hidden lg:block relative h-[600px]"
+        >
+          <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl">
+            <img 
+              src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=1200" 
+              alt="Premier Multi-family Development"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-tr from-stone-50/20 to-transparent" />
+          </div>
+          {/* Decorative elements to "embed" it better */}
+          <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent/10 rounded-full blur-3xl" />
+          <div className="absolute -top-6 -right-6 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
+        </motion.div>
+      </div>
+
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
+        <div className="w-[1px] h-12 bg-primary/30 relative after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-2 after:h-2 after:bg-primary after:rounded-full" />
+      </div>
+    </section>
+  );
+};
+
+const About = () => {
+  return (
+    <section id="about" className="py-24 bg-stone-50 scroll-mt-32">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+          >
+            <span className="text-accent font-medium tracking-[0.2em] uppercase text-xs mb-4 block">
+              The Founder
+            </span>
+            <h2 className="text-4xl md:text-5xl text-primary mb-8">
+              Tudor <span className="italic">Ancas</span>
+            </h2>
+            <div className="space-y-6 text-slate-600 leading-relaxed">
+              <p className="text-lg font-medium text-slate-800">
+                Tudor Ancas founded Ancas Holdings with a clear mission to innovate within the real estate sector and redefine the standards of urban living.
+              </p>
+              <p>
+                As Principal, he leverages a deep understanding of market dynamics and a commitment to operational excellence to lead the firm’s strategic investments in the North and Northwest Chicago areas.
+              </p>
+              <p>
+                Tudor is dedicated to spearheading investment strategies that prioritize high-quality housing and superior property management, ensuring every asset reflects a culture of service excellence. By cultivating strong stakeholder relationships, he focuses on driving sustainable growth that creates a lasting, positive impact on the communities where Ancas Holdings operates.
+              </p>
+              <div className="pt-8">
+                <a 
+                  href="https://www.linkedin.com/in/ancast/" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-primary font-medium hover:text-accent transition-colors group"
+                >
+                  Connect on LinkedIn <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </a>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="relative group"
+          >
+            <div className="aspect-[4/5] overflow-hidden rounded-sm shadow-2xl">
+              <img 
+                src="https://lh3.googleusercontent.com/d/1obGM3aXMGIiEWBPxgsKdjeGx9chO_qzu" 
+                alt="Tudor Ancas"
+                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="absolute -bottom-8 -right-8 bg-white p-8 shadow-xl hidden md:block max-w-xs border-l-4 border-accent">
+              <h3 className="text-xl mb-1 font-serif">Visionary Leadership</h3>
+              <p className="text-sm text-slate-500 italic">"Innovating the real estate space through dedication and excellence."</p>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const Contact = () => {
+  return (
+    <section id="contact" className="py-24 bg-stone-100/50 text-primary scroll-mt-32">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid lg:grid-cols-2 gap-16">
+          <div>
+            <span className="text-accent font-medium tracking-[0.2em] uppercase text-xs mb-4 block">
+              Property Acquisition
+            </span>
+            <h2 className="text-4xl md:text-5xl mb-8">We are always looking to <span className="italic">buy</span> property</h2>
+            <p className="text-primary/60 mb-12 leading-relaxed max-w-md">
+              Our main focus are the north and northwest Chicago and adjacent suburbs markets. If you have a lead, submit it here and we'll follow up within <span className="font-bold underline">2 hours. YES! We mean it...</span>
+            </p>
+
+            <div className="space-y-8">
+              <div className="flex gap-6">
+                <div className="w-12 h-12 bg-primary/5 flex items-center justify-center rounded-full shrink-0">
+                  <Phone className="text-accent w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-lg mb-1">Phone</h4>
+                  <p className="text-primary/50 text-sm">+1 (773) 516-3148</p>
+                </div>
+              </div>
+
+              <div className="flex gap-6">
+                <div className="w-12 h-12 bg-primary/5 flex items-center justify-center rounded-full shrink-0">
+                  <Mail className="text-accent w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-lg mb-1">Email</h4>
+                  <p className="text-primary/50 text-sm">tudor@ancasholdings.com</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-stone-50 p-10 rounded-sm shadow-sm border border-stone-200/50"
+          >
+            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Full Name</label>
+                  <input 
+                    type="text" 
+                    className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Email Address</label>
+                  <input 
+                    type="email" 
+                    className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
+                    placeholder="john@example.com"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Property Address</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
+                  placeholder="123 N Chicago Ave, Chicago, IL"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Property Type</label>
+                <select className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors appearance-none">
+                  <option>Multi-Family</option>
+                  <option>Single Family</option>
+                  <option>Commercial</option>
+                  <option>Mixed-Use</option>
+                  <option>Land</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Lead Details</label>
+                <textarea 
+                  rows={4}
+                  className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
+                  placeholder="Tell us about the property (condition, occupancy, etc.)"
+                />
+              </div>
+              <button className="w-full bg-primary text-white py-4 text-sm font-medium uppercase tracking-widest hover:bg-slate-800 transition-all">
+                Submit Lead
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const Footer = () => {
+  return (
+    <footer className="bg-stone-50 text-primary py-16 border-t border-stone-200/50">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid md:grid-cols-4 gap-12 mb-12">
+          <div className="col-span-2">
+            <Logo className="mb-8" />
+            <p className="text-primary/40 text-sm max-w-sm leading-relaxed">
+              A premier real estate investment and asset management group dedicated to acquiring and optimizing mid-market multi-family properties across Chicago.
+            </p>
+          </div>
+          <div>
+            <h4 className="text-sm uppercase tracking-widest mb-6 font-medium">Navigation</h4>
+            <ul className="space-y-4 text-primary/40 text-sm">
+              <li><a href="#home" className="hover:text-accent transition-colors">Home</a></li>
+              <li><a href="#about" className="hover:text-accent transition-colors">About Us</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm uppercase tracking-widest mb-6 font-medium">Legal</h4>
+            <ul className="space-y-4 text-primary/40 text-sm">
+              <li><a href="#" className="hover:text-accent transition-colors">Privacy Policy</a></li>
+              <li><a href="#" className="hover:text-accent transition-colors">Terms of Service</a></li>
+              <li><a href="#" className="hover:text-accent transition-colors">Investor Disclosures</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="pt-8 border-t border-slate-100 flex flex-col md:row justify-between items-center gap-4 text-primary/30 text-xs uppercase tracking-widest">
+          <p>© 2026 Ancas Holdings. All Rights Reserved.</p>
+          <div className="flex gap-6">
+            <a href="https://www.linkedin.com/in/ancast/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default function App() {
+  return (
+    <div className="min-h-screen">
+      <Navbar />
+      <main>
+        <Hero />
+        <About />
+        <Contact />
+      </main>
+      <Footer />
+    </div>
+  );
+}
