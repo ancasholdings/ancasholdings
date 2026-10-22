@@ -1,0 +1,33 @@
+<svg width="600" height="200" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="transparent" />
+  
+  <!-- Icon Part -->
+  <g transform="translate(20, 30) scale(1.8)">
+    <g>
+      <!-- Left Building -->
+      <path d="M35,45 L35,80 L50,80 L50,40 Z" fill="#00264d" />
+      <rect x="40" y="55" width="4" height="6" fill="white" opacity="0.6" />
+      
+      <!-- Middle Building - Side -->
+      <path d="M70,25 L70,80 L85,80 L85,35 Z" fill="#00264d" opacity="0.9" />
+      
+      <!-- Middle Building - Front -->
+      <path d="M50,35 L50,80 L70,80 L70,25 Z" fill="#d4a017" />
+      <rect x="57" y="45" width="6" height="8" fill="white" opacity="0.6" />
+      
+      <!-- Right Building -->
+      <path d="M85,45 L85,80 L100,80 L100,40 Z" fill="#00264d" />
+      <rect x="91" y="55" width="4" height="6" fill="white" opacity="0.6" />
+    </g>
+
+    <!-- Wavy Line -->
+    <path d="M20,85 Q70,75 120,85" fill="none" stroke="#00264d" stroke-width="4" stroke-linecap="round" />
+  </g>
+
+  <!-- Text Part -->
+  <g transform="translate(280, 85)">
+    <text font-family="Inter, sans-serif" font-weight="900" font-size="48" letter-spacing="-0.02em" fill="#00264d" y="0">ANCAS</text>
+    <text font-family="Inter, sans-serif" font-weight="900" font-size="42" letter-spacing="-0.02em" fill="#00264d" y="42">HOLDINGS</text>
+    <text font-family="Inter, sans-serif" font-weight="700" font-size="12" letter-spacing="0.2em" fill="#00264d" opacity="0.6" y="65">INVESTMENTS &amp; ASSET MANAGEMENT</text>
+  </g>
+</svg>

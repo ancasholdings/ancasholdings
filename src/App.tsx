@@ -12,15 +12,19 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { TenantsPortal } from "./components/TenantsPortal";
 
 // --- Components ---
 
-const Logo = ({ className = "" }: { className?: string }) => {
+const Logo = ({ className = "", onClick }: { className?: string; onClick?: () => void }) => {
   const brandBlue = "#00264d";
   const brandGold = "#d4a017";
   
   return (
-    <div className={`flex items-center gap-4 group cursor-pointer ${className}`}>
+    <div 
+      onClick={onClick} 
+      className={`flex items-center gap-4 group cursor-pointer ${className}`}
+    >
       <div className="relative h-12 md:h-16 flex items-center justify-center transition-all duration-500 transform group-hover:scale-105">
         <svg viewBox="0 0 140 100" className="h-full w-auto drop-shadow-sm">
           {/* Buildings Group */}
@@ -85,7 +89,13 @@ const Logo = ({ className = "" }: { className?: string }) => {
   );
 };
 
-const Navbar = () => {
+interface NavbarProps {
+  activeView: "home" | "tenants";
+  onNavigateHome: (hashTarget?: string) => void;
+  onNavigateTenants: () => void;
+}
+
+const Navbar = ({ activeView, onNavigateHome, onNavigateTenants }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -95,38 +105,54 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navLinks = [
-    { name: "Home", href: "#home" },
-    { name: "About", href: "#about" },
-  ];
-
   return (
     <nav className={`fixed w-full z-50 transition-all duration-500 ${isScrolled ? "bg-white/95 backdrop-blur-md shadow-lg py-3" : "bg-stone-50/80 backdrop-blur-sm py-6"}`}>
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-        <Logo />
+        <Logo onClick={() => onNavigateHome("#home")} />
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.href}
-              className={`text-sm font-medium tracking-widest uppercase transition-colors hover:text-accent text-primary`}
-            >
-              {link.name}
-            </a>
-          ))}
-          <a
-            href="#contact"
-            className={`px-6 py-2 text-sm font-medium uppercase tracking-widest transition-all border border-primary text-primary hover:bg-primary hover:text-white`}
+          <button
+            onClick={() => onNavigateHome("#home")}
+            className={`text-sm font-medium tracking-widest uppercase transition-colors hover:text-accent cursor-pointer ${
+              activeView === "home" ? "text-primary font-bold" : "text-primary/70"
+            }`}
           >
-            Contact/Submit a Property Lead
-          </a>
+            Home
+          </button>
+          
+          <button
+            onClick={() => onNavigateHome("#about")}
+            className="text-sm font-medium tracking-widest uppercase transition-colors hover:text-accent text-primary/70 hover:text-primary cursor-pointer"
+          >
+            About
+          </button>
+
+          <button
+            onClick={onNavigateTenants}
+            className={`relative text-sm font-semibold tracking-widest uppercase transition-colors px-3 py-1.5 rounded-sm cursor-pointer ${
+              activeView === "tenants" 
+                ? "bg-[#00264d] text-white shadow-xs" 
+                : "text-primary hover:text-accent hover:bg-stone-200/50"
+            }`}
+          >
+            Tenants
+            {activeView !== "tenants" && (
+              <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-[#d4a017]" />
+            )}
+          </button>
+
+          <button
+            onClick={() => onNavigateHome("#contact")}
+            className="px-6 py-2 text-sm font-medium uppercase tracking-widest transition-all border border-primary text-primary hover:bg-primary hover:text-white cursor-pointer"
+          >
+            Contact / Submit Lead
+          </button>
         </div>
 
         {/* Mobile Toggle */}
         <button 
-          className="md:hidden"
+          className="md:hidden cursor-pointer"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? (
@@ -144,23 +170,53 @@ const Navbar = () => {
           animate={{ opacity: 1, y: 0 }}
           className="absolute top-full left-0 w-full bg-white shadow-xl py-6 px-6 flex flex-col gap-4 md:hidden"
         >
-          {navLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.href}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-serif text-primary border-b border-slate-100 pb-2"
-            >
-              {link.name}
-            </a>
-          ))}
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              onNavigateHome("#home");
+            }}
+            className="text-left text-lg font-serif text-primary border-b border-slate-100 pb-2 cursor-pointer"
+          >
+            Home
+          </button>
+          
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              onNavigateHome("#about");
+            }}
+            className="text-left text-lg font-serif text-primary border-b border-slate-100 pb-2 cursor-pointer"
+          >
+            About
+          </button>
+
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              onNavigateTenants();
+            }}
+            className="text-left text-lg font-serif text-primary border-b border-slate-100 pb-2 font-bold text-[#00264d] flex items-center justify-between cursor-pointer"
+          >
+            <span>Tenants Portal</span>
+            <span className="text-xs font-sans uppercase tracking-widest px-2 py-0.5 bg-[#d4a017]/20 text-[#00264d] rounded">Maintenance</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              onNavigateHome("#contact");
+            }}
+            className="text-left text-sm uppercase tracking-widest font-semibold text-[#00264d] pt-2 cursor-pointer"
+          >
+            Contact / Submit a Property Lead →
+          </button>
         </motion.div>
       )}
     </nav>
   );
 };
 
-const Hero = () => {
+const Hero = ({ onNavigateTenants }: { onNavigateTenants?: () => void }) => {
   return (
     <section id="home" className="relative min-h-screen flex items-center bg-stone-50 scroll-mt-32 overflow-hidden">
       <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pt-32 md:pt-40 grid lg:grid-cols-2 gap-12 items-center">
@@ -181,7 +237,7 @@ const Hero = () => {
           <p className="text-primary/70 text-base md:text-lg mb-10 font-light leading-relaxed">
             We specialize in identifying high-potential assets where strategic management and thoughtful capital improvements can drive long-term value for our investors. Beyond the bottom line, our mission is rooted in the belief that quality housing is a cornerstone of a thriving neighborhood; by revitalizing these properties, we aim to elevate living standards for our residents and contribute to the overall strength and vibrancy of the communities we serve.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <a 
               href="#about" 
               className="bg-primary text-white px-8 py-4 text-sm font-medium uppercase tracking-widest hover:bg-primary/90 transition-all flex items-center justify-center"
@@ -195,6 +251,17 @@ const Hero = () => {
               Get in Touch
             </a>
           </div>
+          {onNavigateTenants && (
+            <div>
+              <button
+                onClick={onNavigateTenants}
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#00264d] hover:text-[#d4a017] transition-colors cursor-pointer group"
+              >
+                <span>Current Resident? Submit a Maintenance Request</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
+          )}
         </motion.div>
 
         <motion.div
@@ -388,22 +455,58 @@ const Contact = () => {
   );
 };
 
-const Footer = () => {
+interface FooterProps {
+  onNavigateHome: (hashTarget?: string) => void;
+  onNavigateTenants: () => void;
+}
+
+const Footer = ({ onNavigateHome, onNavigateTenants }: FooterProps) => {
   return (
     <footer className="bg-stone-50 text-primary py-16 border-t border-stone-200/50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid md:grid-cols-4 gap-12 mb-12">
           <div className="col-span-2">
-            <Logo className="mb-8" />
+            <Logo onClick={() => onNavigateHome("#home")} className="mb-8" />
             <p className="text-primary/40 text-sm max-w-sm leading-relaxed">
               A premier real estate investment and asset management group dedicated to acquiring and optimizing mid-market multi-family properties across Chicago.
             </p>
           </div>
           <div>
             <h4 className="text-sm uppercase tracking-widest mb-6 font-medium">Navigation</h4>
-            <ul className="space-y-4 text-primary/40 text-sm">
-              <li><a href="#home" className="hover:text-accent transition-colors">Home</a></li>
-              <li><a href="#about" className="hover:text-accent transition-colors">About Us</a></li>
+            <ul className="space-y-4 text-primary/60 text-sm">
+              <li>
+                <button 
+                  onClick={() => onNavigateHome("#home")} 
+                  className="hover:text-accent transition-colors cursor-pointer text-left"
+                >
+                  Home
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => onNavigateHome("#about")} 
+                  className="hover:text-accent transition-colors cursor-pointer text-left"
+                >
+                  About Us
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={onNavigateTenants} 
+                  className="hover:text-accent font-semibold text-[#00264d] transition-colors cursor-pointer text-left flex items-center gap-1.5"
+                >
+                  <span>Tenants Portal</span>
+                  <span className="text-[9px] px-1.5 py-0.5 bg-[#d4a017]/20 text-[#00264d] font-bold uppercase rounded">Maintenance</span>
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => onNavigateHome("#contact")} 
+                  className="hover:text-accent transition-colors cursor-pointer text-left"
+                >
+                  Contact / Property Leads
+                </button>
+              </li>
             </ul>
           </div>
           <div>
@@ -411,11 +514,11 @@ const Footer = () => {
             <ul className="space-y-4 text-primary/40 text-sm">
               <li><a href="#" className="hover:text-accent transition-colors">Privacy Policy</a></li>
               <li><a href="#" className="hover:text-accent transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors">Investor Disclosures</a></li>
+              <li><a href="#" className="hover:text-accent transition-colors">Fair Housing Notice</a></li>
             </ul>
           </div>
         </div>
-        <div className="pt-8 border-t border-slate-100 flex flex-col md:row justify-between items-center gap-4 text-primary/30 text-xs uppercase tracking-widest">
+        <div className="pt-8 border-t border-slate-200/60 flex flex-col md:flex-row justify-between items-center gap-4 text-primary/40 text-xs uppercase tracking-widest">
           <p>© 2026 Ancas Holdings. All Rights Reserved.</p>
           <div className="flex gap-6">
             <a href="https://www.linkedin.com/in/ancast/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">LinkedIn</a>
@@ -427,15 +530,64 @@ const Footer = () => {
 };
 
 export default function App() {
+  const [activeView, setActiveView] = useState<"home" | "tenants">(() => {
+    return typeof window !== "undefined" && window.location.hash === "#tenants" ? "tenants" : "home";
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === "#tenants") {
+        setActiveView("tenants");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        setActiveView("home");
+      }
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  const navigateToHome = (hashTarget = "#home") => {
+    setActiveView("home");
+    window.location.hash = hashTarget;
+    if (hashTarget === "#home") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      setTimeout(() => {
+        const el = document.querySelector(hashTarget);
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    }
+  };
+
+  const navigateToTenants = () => {
+    setActiveView("tenants");
+    window.location.hash = "#tenants";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
-    <div className="min-h-screen">
-      <Navbar />
+    <div className="min-h-screen bg-stone-50">
+      <Navbar 
+        activeView={activeView}
+        onNavigateHome={navigateToHome}
+        onNavigateTenants={navigateToTenants}
+      />
       <main>
-        <Hero />
-        <About />
-        <Contact />
+        {activeView === "tenants" ? (
+          <TenantsPortal onBackToHome={() => navigateToHome("#home")} />
+        ) : (
+          <>
+            <Hero onNavigateTenants={navigateToTenants} />
+            <About />
+            <Contact />
+          </>
+        )}
       </main>
-      <Footer />
+      <Footer 
+        onNavigateHome={navigateToHome}
+        onNavigateTenants={navigateToTenants}
+      />
     </div>
   );
 }
