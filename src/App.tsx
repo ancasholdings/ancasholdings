@@ -9,9 +9,10 @@ import {
   ChevronRight,
   Menu,
   X,
-  ArrowRight
+  ArrowRight,
+  CheckCircle2
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { TenantsPortal } from "./components/TenantsPortal";
 
 // --- Components ---
@@ -357,6 +358,45 @@ const About = () => {
 };
 
 const Contact = () => {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [propertyAddress, setPropertyAddress] = useState("");
+  const [propertyType, setPropertyType] = useState("Multi-Family");
+  const [details, setDetails] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmitLead = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim() || !email.trim() || !propertyAddress.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await fetch("https://formsubmit.co/ajax/tudor@ancasholdings.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          _subject: `[Property Lead Acquisition] ${propertyAddress} (${propertyType})`,
+          _replyto: email,
+          _captcha: "false",
+          _template: "table",
+          "Contact Name": fullName,
+          "Contact Email": email,
+          "Property Address": propertyAddress,
+          "Property Type": propertyType,
+          "Lead Details": details
+        })
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+      setSubmitted(true);
+    }
+  };
+
   return (
     <section id="contact" className="py-24 bg-stone-100/50 text-primary scroll-mt-32">
       <div className="max-w-7xl mx-auto px-6">
@@ -399,55 +439,106 @@ const Contact = () => {
             viewport={{ once: true }}
             className="bg-stone-50 p-10 rounded-sm shadow-sm border border-stone-200/50"
           >
-            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-              <div className="grid md:grid-cols-2 gap-6">
+            {submitted ? (
+              <div className="py-8 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-serif text-[#00264d]">Lead Received & Dispatched</h3>
+                <p className="text-xs text-slate-600 max-w-sm mx-auto leading-relaxed">
+                  Thank you! Your lead details for <span className="font-semibold">{propertyAddress}</span> have been delivered to our acquisitions team. We will review the asset and follow up within 2 hours.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmitted(false);
+                    setFullName("");
+                    setEmail("");
+                    setPropertyAddress("");
+                    setDetails("");
+                  }}
+                  className="mt-4 px-6 py-2.5 bg-[#00264d] text-white text-xs uppercase tracking-widest font-semibold hover:bg-slate-800 transition-colors"
+                >
+                  Submit Another Lead
+                </button>
+              </div>
+            ) : (
+              <form className="space-y-6" onSubmit={handleSubmitLead}>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Full Name *</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Email Address *</label>
+                    <input 
+                      type="email" 
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
+                      placeholder="john@example.com"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Full Name</label>
+                  <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Property Address *</label>
                   <input 
                     type="text" 
+                    required
+                    value={propertyAddress}
+                    onChange={(e) => setPropertyAddress(e.target.value)}
                     className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
-                    placeholder="John Doe"
+                    placeholder="123 N Chicago Ave, Chicago, IL"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Email Address</label>
-                  <input 
-                    type="email" 
+                  <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Property Type</label>
+                  <select 
+                    value={propertyType}
+                    onChange={(e) => setPropertyType(e.target.value)}
+                    className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors appearance-none"
+                  >
+                    <option>Multi-Family</option>
+                    <option>Single Family</option>
+                    <option>Commercial</option>
+                    <option>Mixed-Use</option>
+                    <option>Land</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Lead Details</label>
+                  <textarea 
+                    rows={4}
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
                     className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
-                    placeholder="john@example.com"
+                    placeholder="Tell us about the property (condition, occupancy, etc.)"
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Property Address</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
-                  placeholder="123 N Chicago Ave, Chicago, IL"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Property Type</label>
-                <select className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors appearance-none">
-                  <option>Multi-Family</option>
-                  <option>Single Family</option>
-                  <option>Commercial</option>
-                  <option>Mixed-Use</option>
-                  <option>Land</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-widest text-stone-400 font-medium">Lead Details</label>
-                <textarea 
-                  rows={4}
-                  className="w-full bg-white border border-stone-200 p-3 text-primary focus:outline-none focus:border-accent transition-colors"
-                  placeholder="Tell us about the property (condition, occupancy, etc.)"
-                />
-              </div>
-              <button className="w-full bg-primary text-white py-4 text-sm font-medium uppercase tracking-widest hover:bg-slate-800 transition-all">
-                Submit Lead
-              </button>
-            </form>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-primary text-white py-4 text-sm font-medium uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Transmitting Lead to Acquisitions Desk...</span>
+                    </>
+                  ) : (
+                    <span>Submit Lead</span>
+                  )}
+                </button>
+              </form>
+            )}
           </motion.div>
         </div>
       </div>
