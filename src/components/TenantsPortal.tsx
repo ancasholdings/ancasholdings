@@ -280,44 +280,23 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
           form.appendChild(input);
         };
 
-        addField("_subject", `[Maintenance Request #${ticket.ticketId}] Unit ${ticket.unitNumber} - ${ticket.propertyAddress} (${ticket.urgencyLevel.toUpperCase()})`);
+        addField("_subject", `[Ticket #${ticket.ticketId}] Maintenance Request - Unit ${ticket.unitNumber}, ${ticket.propertyAddress} (${ticket.urgencyLevel.toUpperCase()})`);
         // Crucial for FormSubmit: the input named "email" triggers FormSubmit's _autoresponse to the person submitting
         addField("email", ticket.tenantEmail);
         addField("_replyto", ticket.tenantEmail);
-        // FormSubmit _cc sends an exact copy of the submitted work order to the tenant
-        addField("_cc", ticket.tenantEmail);
+        // Notice: Submission goes directly to tudor@ancasholdings.com; no _cc so submitter receives only the separate brief confirmation notification
         addField("_captcha", "false");
         addField("_template", "table");
         addField(
           "_autoresponse",
-          `ANCAS HOLDINGS - MAINTENANCE WORK ORDER CONFIRMATION
-Ticket Reference: #${ticket.ticketId}
-Date Submitted: ${ticket.submittedAt}
+          `Hello ${ticket.tenantName},
 
-Hello ${ticket.tenantName},
+Thank you for contacting Ancas Holdings.
 
-Thank you for contacting Ancas Holdings Maintenance. This automated notification confirms that your work order request (Ticket #${ticket.ticketId}) has been successfully received and logged into our operations system.
+Your maintenance ticket #${ticket.ticketId} has been received. Someone from our property management team will review your request and be in touch within 24-48 hours.
 
-REQUEST SUMMARY:
-• Ticket Number: #${ticket.ticketId}
-• Submitter / Resident: ${ticket.tenantName}
-• Property Address: ${ticket.propertyAddress}
-• Apartment / Unit #: ${ticket.unitNumber}
-• Maintenance Category: ${ticket.maintenanceType}
-• Urgency Level: ${ticket.urgencyLevel.toUpperCase()}
-• Service Window: ${ticket.preferredTime}
-• Permission to Enter: ${ticket.permissionToEnter}
-• Issue Description: ${ticket.description}
-${photoList.length > 0 ? `• Attached Photos: ${photoList.length} photo(s) submitted` : "• Attached Photos: None"}
-
-WHAT HAPPENS NEXT:
-All details and images have been transmitted to our operations team and are promptly being reviewed by an appropriate technician. Our team will reach out to you directly at ${ticket.tenantPhone || ticket.tenantEmail} regarding technician dispatch and scheduling.
-
-Please retain your Ticket Reference Number (#${ticket.ticketId}) for any questions or follow-ups.
-
-Sincerely,
-Operations & Resident Care Team
-Ancas Holdings`
+Thank you for your patience,
+Ancas Holdings Property Management`
         );
 
         addField("Ticket ID", ticket.ticketId);
@@ -538,9 +517,23 @@ Ancas Holdings`
     window.location.href = `mailto:tudor@ancasholdings.com?subject=${subject}&body=${body}`;
   };
 
+  const getSubmitterNotificationSubject = (ticket: SubmittedTicket) => {
+    return `[Ticket #${ticket.ticketId}] Maintenance Request Received - Ancas Holdings`;
+  };
+
+  const getSubmitterNotificationBody = (ticket: SubmittedTicket) => {
+    return (
+      `Hello ${ticket.tenantName},\n\n` +
+      `Thank you for contacting Ancas Holdings.\n\n` +
+      `Your maintenance ticket #${ticket.ticketId} has been received. Someone from our property management team will review your request and be in touch within 24-48 hours.\n\n` +
+      `Thank you for your patience,\n` +
+      `Ancas Holdings Property Management`
+    );
+  };
+
   const getSelfEmailComposeUrl = (ticket: SubmittedTicket) => {
-    const subject = encodeURIComponent(`[Maintenance Receipt #${ticket.ticketId}] Unit ${ticket.unitNumber} - ${ticket.propertyAddress}`);
-    const body = encodeURIComponent(getTicketSummaryText(ticket));
+    const subject = encodeURIComponent(getSubmitterNotificationSubject(ticket));
+    const body = encodeURIComponent(getSubmitterNotificationBody(ticket));
     return `mailto:${ticket.tenantEmail}?subject=${subject}&body=${body}`;
   };
 
@@ -718,10 +711,10 @@ Ancas Holdings`
                         </span>
                       </div>
                       <p className="text-sm font-semibold text-emerald-950 mt-1">
-                        An email receipt has been sent to: <span className="font-bold underline text-[#00264d]">{submittedTicket.tenantEmail}</span>
+                        Confirmation email sent to: <span className="font-bold underline text-[#00264d]">{submittedTicket.tenantEmail}</span>
                       </p>
                       <p className="text-xs text-emerald-800 leading-relaxed mt-1">
-                        A detailed confirmation with your Ticket Reference <span className="font-bold">#{submittedTicket.ticketId}</span>, submitted details, and estimated process timeline has been dispatched to your email for your personal records.
+                        A separate, brief confirmation notification has been dispatched to your email confirming that Ticket <span className="font-bold">#{submittedTicket.ticketId}</span> was received and that a team member will be in touch within 24–48 hours.
                       </p>
                     </div>
                   </div>
@@ -735,6 +728,28 @@ Ancas Holdings`
                       <Mail className="w-3.5 h-3.5" />
                       <span>Send / Save Copy to My Email</span>
                     </button>
+                  </div>
+                </div>
+
+                {/* Submitter Confirmation Receipt Template Preview */}
+                <div className="mt-4 pt-3.5 border-t border-emerald-200/80">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                      <FileCheck className="w-3.5 h-3.5 text-emerald-700" />
+                      Confirmation Receipt Template (Sent to Submitter)
+                    </span>
+                    <span className="text-[11px] text-emerald-800/80">
+                      Separate notification to: <span className="font-semibold">{submittedTicket.tenantEmail}</span>
+                    </span>
+                  </div>
+                  <div className="bg-white/95 rounded border border-emerald-200 p-3.5 text-xs text-slate-700 shadow-2xs space-y-2">
+                    <div className="text-[11px] font-mono text-slate-800 border-b border-stone-100 pb-1.5">
+                      <span className="font-semibold text-slate-500">Subject: </span>
+                      {getSubmitterNotificationSubject(submittedTicket)}
+                    </div>
+                    <div className="whitespace-pre-line text-slate-700 leading-relaxed font-sans text-xs">
+                      {getSubmitterNotificationBody(submittedTicket)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1024,7 +1039,7 @@ Ancas Holdings`
                       required
                       className="w-full bg-stone-50 border border-stone-300 p-3 text-sm text-slate-800 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#00264d] focus:bg-white transition-all"
                     />
-                    <p className="text-[11px] text-slate-400">Confirmation receipt will be sent here</p>
+                    <p className="text-[11px] text-slate-400">Confirmation receipt with your ticket # will be sent here</p>
                   </div>
 
                   <div className="space-y-2">
@@ -1405,7 +1420,7 @@ Ancas Holdings`
                   <div className="flex items-center gap-2 text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-3 py-2 rounded-sm">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>
-                      An automated confirmation notification with your Ticket Number will be sent to the email address provided above.
+                      An automated confirmation notification with your Ticket Number will be sent to your email (our team will be in touch within 24–48 hours).
                     </span>
                   </div>
                 </div>
