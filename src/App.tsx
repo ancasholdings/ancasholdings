@@ -101,6 +101,7 @@ interface NavbarProps {
 const Navbar = ({ activeView, onNavigateHome, onNavigateAvailability, onNavigateTenants }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [currentHash, setCurrentHash] = useState(() => (typeof window !== "undefined" ? window.location.hash : "#home"));
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -108,69 +109,104 @@ const Navbar = ({ activeView, onNavigateHome, onNavigateAvailability, onNavigate
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const handleHash = () => {
+      setCurrentHash(window.location.hash || "#home");
+    };
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
+
+  const navItems = [
+    {
+      id: "home",
+      label: "Home",
+      isActive: activeView === "home" && (currentHash === "" || currentHash === "#home"),
+      onClick: () => {
+        setCurrentHash("#home");
+        onNavigateHome("#home");
+      }
+    },
+    {
+      id: "about",
+      label: "About",
+      isActive: activeView === "home" && currentHash === "#about",
+      onClick: () => {
+        setCurrentHash("#about");
+        onNavigateHome("#about");
+      }
+    },
+    {
+      id: "availability",
+      label: "Availability",
+      isActive: activeView === "availability",
+      onClick: () => {
+        setCurrentHash("#availability");
+        onNavigateAvailability();
+      }
+    },
+    {
+      id: "tenants",
+      label: "Tenants",
+      isActive: activeView === "tenants",
+      onClick: () => {
+        setCurrentHash("#tenants");
+        onNavigateTenants();
+      }
+    },
+    {
+      id: "contact",
+      label: "Contact / Submit Lead",
+      isActive: activeView === "home" && currentHash === "#contact",
+      onClick: () => {
+        setCurrentHash("#contact");
+        onNavigateHome("#contact");
+      }
+    }
+  ];
+
   return (
-    <nav className={`fixed w-full z-50 transition-all duration-500 ${isScrolled ? "bg-white/95 backdrop-blur-md shadow-lg py-3" : "bg-stone-50/80 backdrop-blur-sm py-6"}`}>
+    <nav className={`fixed w-full z-50 transition-all duration-500 ${isScrolled ? "bg-white/95 backdrop-blur-md shadow-md py-3" : "bg-stone-50/90 backdrop-blur-sm py-4 md:py-5"}`}>
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
         <Logo onClick={() => onNavigateHome("#home")} />
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
-          <button
-            onClick={() => onNavigateHome("#home")}
-            className={`text-sm font-medium tracking-widest uppercase transition-colors hover:text-accent cursor-pointer ${
-              activeView === "home" ? "text-primary font-bold" : "text-primary/70"
-            }`}
-          >
-            Home
-          </button>
-          
-          <button
-            onClick={() => onNavigateHome("#about")}
-            className="text-sm font-medium tracking-widest uppercase transition-colors hover:text-accent text-primary/70 hover:text-primary cursor-pointer"
-          >
-            About
-          </button>
-
-          <button
-            onClick={onNavigateAvailability}
-            className={`text-sm font-medium tracking-widest uppercase transition-colors hover:text-accent cursor-pointer ${
-              activeView === "availability" ? "text-primary font-bold border-b-2 border-[#d4a017] pb-0.5" : "text-primary/70"
-            }`}
-          >
-            Availability
-          </button>
-
-          <button
-            onClick={onNavigateTenants}
-            className={`relative text-sm font-semibold tracking-widest uppercase transition-colors px-3 py-1.5 rounded-sm cursor-pointer ${
-              activeView === "tenants" 
-                ? "bg-[#00264d] text-white shadow-xs" 
-                : "text-primary hover:text-accent hover:bg-stone-200/50"
-            }`}
-          >
-            Tenants
-            {activeView !== "tenants" && (
-              <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-[#d4a017]" />
-            )}
-          </button>
-
-          <button
-            onClick={() => onNavigateHome("#contact")}
-            className="px-6 py-2 text-sm font-medium uppercase tracking-widest transition-all border border-primary text-primary hover:bg-primary hover:text-white cursor-pointer"
-          >
-            Contact / Submit Lead
-          </button>
+        {/* Desktop Nav - Unified Button Styling & Identical Rollover Effects */}
+        <div className="hidden md:flex items-center gap-2 lg:gap-3">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={item.onClick}
+              className={`group relative px-3.5 lg:px-4 py-2 text-xs font-semibold tracking-wider uppercase rounded-sm transition-all duration-200 cursor-pointer border select-none active:scale-95 ${
+                item.isActive
+                  ? "bg-[#00264d] text-white border-[#00264d] shadow-xs"
+                  : "bg-white/80 hover:bg-white text-slate-700 hover:text-[#00264d] border-stone-200/90 hover:border-[#d4a017] hover:shadow-sm"
+              }`}
+            >
+              <span className="relative z-10 flex items-center justify-center">
+                {item.label}
+              </span>
+              {/* Gold underline accent on rollover and active */}
+              <span
+                className={`absolute bottom-0 left-2 right-2 h-0.5 rounded-full transition-all duration-200 ${
+                  item.isActive
+                    ? "bg-[#d4a017] opacity-100"
+                    : "bg-[#d4a017] opacity-0 scale-x-75 group-hover:opacity-100 group-hover:scale-x-100"
+                }`}
+              />
+            </button>
+          ))}
         </div>
 
         {/* Mobile Toggle */}
         <button 
-          className="md:hidden cursor-pointer"
+          className="md:hidden cursor-pointer p-2 rounded-sm text-[#00264d] hover:bg-stone-200/50 transition-colors"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle Navigation Menu"
         >
           {isMobileMenuOpen ? (
-            <X className="text-primary" />
+            <X className="text-primary w-6 h-6" />
           ) : (
-            <Menu className="text-primary" />
+            <Menu className="text-primary w-6 h-6" />
           )}
         </button>
       </div>
@@ -180,58 +216,29 @@ const Navbar = ({ activeView, onNavigateHome, onNavigateAvailability, onNavigate
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-full left-0 w-full bg-white shadow-xl py-6 px-6 flex flex-col gap-4 md:hidden"
+          className="absolute top-full left-0 w-full bg-white shadow-xl py-5 px-6 flex flex-col gap-2.5 md:hidden border-t border-stone-100"
         >
-          <button
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              onNavigateHome("#home");
-            }}
-            className="text-left text-lg font-serif text-primary border-b border-slate-100 pb-2 cursor-pointer"
-          >
-            Home
-          </button>
-          
-          <button
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              onNavigateHome("#about");
-            }}
-            className="text-left text-lg font-serif text-primary border-b border-slate-100 pb-2 cursor-pointer"
-          >
-            About
-          </button>
-
-          <button
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              onNavigateAvailability();
-            }}
-            className="text-left text-lg font-serif text-primary border-b border-slate-100 pb-2 font-bold text-[#00264d] cursor-pointer"
-          >
-            Availability
-          </button>
-
-          <button
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              onNavigateTenants();
-            }}
-            className="text-left text-lg font-serif text-primary border-b border-slate-100 pb-2 font-bold text-[#00264d] flex items-center justify-between cursor-pointer"
-          >
-            <span>Tenants Portal</span>
-            <span className="text-xs font-sans uppercase tracking-widest px-2 py-0.5 bg-[#d4a017]/20 text-[#00264d] rounded">Maintenance</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              onNavigateHome("#contact");
-            }}
-            className="text-left text-sm uppercase tracking-widest font-semibold text-[#00264d] pt-2 cursor-pointer"
-          >
-            Contact / Submit a Property Lead →
-          </button>
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                item.onClick();
+              }}
+              className={`group relative w-full text-left px-4 py-3 text-xs font-semibold tracking-wider uppercase rounded-sm transition-all duration-200 cursor-pointer border flex items-center justify-between active:scale-[0.98] ${
+                item.isActive
+                  ? "bg-[#00264d] text-white border-[#00264d] shadow-xs"
+                  : "bg-stone-50 hover:bg-white text-slate-700 hover:text-[#00264d] border-stone-200 hover:border-[#d4a017]"
+              }`}
+            >
+              <span>{item.label}</span>
+              <span
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                  item.isActive ? "bg-[#d4a017]" : "bg-transparent group-hover:bg-[#d4a017]"
+                }`}
+              />
+            </button>
+          ))}
         </motion.div>
       )}
     </nav>
@@ -313,10 +320,6 @@ const Hero = ({
           <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent/10 rounded-full blur-3xl" />
           <div className="absolute -top-6 -right-6 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
         </motion.div>
-      </div>
-
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
-        <div className="w-[1px] h-12 bg-primary/30 relative after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-2 after:h-2 after:bg-primary after:rounded-full" />
       </div>
     </section>
   );

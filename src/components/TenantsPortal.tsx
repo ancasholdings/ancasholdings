@@ -605,44 +605,44 @@ Ancas Holdings Property Management`,
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-3.5 border-t border-amber-200/80 text-xs text-amber-950">
-            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
-              <span className="font-bold text-amber-900 block mb-0.5">• Changing Light Bulbs</span>
-              <span className="text-amber-800">Replacing standard bulbs in interior fixtures, lamps, and track lights.</span>
-            </div>
-            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
-              <span className="font-bold text-amber-900 block mb-0.5">• Furnace Air Filters</span>
-              <span className="text-amber-800">Routine periodic replacement of furnace and HVAC unit air filters.</span>
-            </div>
-            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
-              <span className="font-bold text-amber-900 block mb-0.5">• Sweeping Lobbies & Stairwells</span>
-              <span className="text-amber-800">Keeping personal door thresholds, entry landings, and steps clean.</span>
-            </div>
-            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
-              <span className="font-bold text-amber-900 block mb-0.5">• Cleaning Trash & Debris</span>
-              <span className="text-amber-800">Disposing of personal household rubbish, delivery boxes, and food containers.</span>
-            </div>
-            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
-              <span className="font-bold text-amber-900 block mb-0.5">• Picking Up Animal Feces</span>
-              <span className="text-amber-800">Promptly picking up and bagging pet waste on property grounds or interior.</span>
-            </div>
-            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
-              <span className="font-bold text-amber-900 block mb-0.5">• Minor Toilet & Sink Clogs</span>
-              <span className="text-amber-800">Clearing simple toilet or drain backups using a standard plunger.</span>
-            </div>
-            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
-              <span className="font-bold text-amber-900 block mb-0.5">• Smoke Alarm & Thermostat Batteries</span>
-              <span className="text-amber-800">Replacing 9V or AA batteries when units emit a low-battery chirp.</span>
-            </div>
-            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
-              <span className="font-bold text-amber-900 block mb-0.5">• Tripped Outlets & Breakers</span>
-              <span className="text-amber-800">Pressing reset on GFCI wall outlets or resetting tripped electrical panel switches.</span>
-            </div>
-            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
-              <span className="font-bold text-amber-900 block mb-0.5">• General Housekeeping</span>
-              <span className="text-amber-800">Standard cleaning, kitchen appliance surface wiping, and day-to-day tidiness.</span>
-            </div>
-          </div>
+          <ul className="grid sm:grid-cols-2 md:grid-cols-3 gap-y-2.5 gap-x-6 pt-3.5 border-t border-amber-200/80 text-xs md:text-sm text-amber-950 font-medium">
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+              <span>Changing light bulbs</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+              <span>Furnace air filters</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+              <span>Sweeping lobbies & stairwells</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+              <span>Cleaning trash & debris</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+              <span>Picking up animal feces</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+              <span>Minor toilet & sink clogs</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+              <span>Smoke alarm & thermostat batteries</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+              <span>Tripped outlets & breakers</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+              <span>General housekeeping</span>
+            </li>
+          </ul>
         </div>
 
         {/* Confirmation Ticket Receipt View */}
