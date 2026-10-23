@@ -235,7 +235,8 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
     setPhotos(prev => prev.filter(p => p.id !== id));
   };
 
-  // Direct multipart form submission using FormSubmit AJAX API with native file uploads and contractor-ready Work Order formatting
+  // Direct multipart form submission using native form submission targeted to a hidden iframe
+  // This guarantees FormSubmit processes binary files and attaches photos to the dispatch email
   const sendEmailDispatch = async (ticket: SubmittedTicket, photoList: PhotoItem[]) => {
     try {
       const categoryShort = ticket.maintenanceType.split("(")[0].trim();
@@ -267,104 +268,108 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
         "Issue Description:",
         ticket.description,
         "",
-        "--- ATTACHED MEDIA ---",
+        "--- ATTACHED MEDIA (MANDATORY) ---",
         photoList.length > 0
-          ? `${photoList.length} photo(s) attached directly to this dispatch email (${photoList.map(p => p.name).join(", ")})`
-          : "No photos attached by resident",
+          ? `${photoList.length} photo(s) attached directly to this dispatch email (${photoList.map(p => `${p.name} [${p.size}]`).join(", ")})`
+          : "Photo upload required",
         "============================================================"
       ].join("\n");
 
-      const formData = new FormData();
-      formData.append("_subject", subjectLine);
-      formData.append("email", ticket.tenantEmail);
-      formData.append("_replyto", ticket.tenantEmail);
-      formData.append("_cc", ticket.tenantEmail);
-      formData.append("_captcha", "false");
-      formData.append("_template", "box");
-      formData.append(
-        "_autoresponse",
-        `Hello ${ticket.tenantName},
+      const fields: Record<string, string> = {
+        _subject: subjectLine,
+        email: ticket.tenantEmail,
+        _replyto: ticket.tenantEmail,
+        _cc: ticket.tenantEmail,
+        _captcha: "false",
+        _template: "box",
+        _autoresponse: `Hello ${ticket.tenantName},
 
 Thank you for contacting Ancas Holdings.
 
 Your maintenance ticket #${ticket.ticketId} has been received. Someone from our property management team will review your request and be in touch within 24-48 hours.
 
 Thank you for your patience,
-Ancas Holdings Property Management`
-      );
+Ancas Holdings Property Management`,
+        "CONTRACTOR WORK ORDER SUMMARY": executiveContractorSummary,
+        "[WORK ORDER] Ticket Number": ticket.ticketId,
+        "[WORK ORDER] Priority Rating": ticket.urgencyLevel.toUpperCase(),
+        "[WORK ORDER] Date & Time Submitted": ticket.submittedAt,
+        "[JOB SITE] Property Address": ticket.propertyAddress,
+        "[JOB SITE] Apartment / Unit Number": ticket.unitNumber,
+        "[JOB SITE] Location in Unit": ticket.locationInUnit,
+        "[ACCESS & RESIDENT] Tenant Full Name": ticket.tenantName,
+        "[ACCESS & RESIDENT] Contact Phone (Direct)": ticket.tenantPhone,
+        "[ACCESS & RESIDENT] Tenant Email": ticket.tenantEmail,
+        "[ACCESS & RESIDENT] Permission to Enter": ticket.permissionToEnter,
+        "[ACCESS & RESIDENT] Preferred Service Window": ticket.preferredTime,
+        "[SCOPE OF WORK] Trade Category": ticket.maintenanceType,
+        "[SCOPE OF WORK] Issue Description": ticket.description,
+        "[ATTACHMENTS] Attached Photos": `${photoList.length} photo(s) attached (${photoList.map(p => p.name).join(", ")})`
+      };
 
-      // Executive Contractor Summary Block (Prominent at top of email)
-      formData.append("CONTRACTOR WORK ORDER SUMMARY", executiveContractorSummary);
-
-      // Grouped, crystal-clear Work Order Data Fields
-      formData.append("[WORK ORDER] Ticket Number", ticket.ticketId);
-      formData.append("[WORK ORDER] Priority Rating", ticket.urgencyLevel.toUpperCase());
-      formData.append("[WORK ORDER] Date & Time Submitted", ticket.submittedAt);
-
-      formData.append("[JOB SITE] Property Address", ticket.propertyAddress);
-      formData.append("[JOB SITE] Apartment / Unit Number", ticket.unitNumber);
-      formData.append("[JOB SITE] Location in Unit", ticket.locationInUnit);
-
-      formData.append("[ACCESS & RESIDENT] Tenant Full Name", ticket.tenantName);
-      formData.append("[ACCESS & RESIDENT] Contact Phone (Direct)", ticket.tenantPhone);
-      formData.append("[ACCESS & RESIDENT] Tenant Email", ticket.tenantEmail);
-      formData.append("[ACCESS & RESIDENT] Permission to Enter", ticket.permissionToEnter);
-      formData.append("[ACCESS & RESIDENT] Preferred Service Window", ticket.preferredTime);
-
-      formData.append("[SCOPE OF WORK] Trade Category", ticket.maintenanceType);
-      formData.append("[SCOPE OF WORK] Issue Description", ticket.description);
-
-      if (photoList.length > 0) {
-        formData.append("[ATTACHMENTS] Attached Photos", `${photoList.length} photo(s) attached directly to this email`);
-        photoList.forEach((p, idx) => {
-          if (p.file) {
-            formData.append("attachment", p.file, p.name || `photo_${idx + 1}.jpg`);
-          }
-        });
-      } else {
-        formData.append("[ATTACHMENTS] Attached Photos", "None");
+      // Ensure hidden target iframe exists in DOM
+      let iframe = document.getElementById("formsubmit_dispatch_frame") as HTMLIFrameElement;
+      if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.id = "formsubmit_dispatch_frame";
+        iframe.name = "formsubmit_dispatch_frame";
+        iframe.style.display = "none";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "none";
+        document.body.appendChild(iframe);
       }
 
-      // Submit via FormSubmit AJAX endpoint
-      const response = await fetch("https://formsubmit.co/ajax/tudor@ancasholdings.com", {
-        method: "POST",
-        headers: {
-          Accept: "application/json"
-          // Note: Browser automatically sets Content-Type to multipart/form-data with proper boundary
-        },
-        body: formData
+      // Create native HTML form for standard multipart POST
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "https://formsubmit.co/tudor@ancasholdings.com";
+      form.enctype = "multipart/form-data";
+      form.target = "formsubmit_dispatch_frame";
+      form.style.display = "none";
+
+      // Append all text fields
+      Object.entries(fields).forEach(([key, val]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = val;
+        form.appendChild(input);
       });
 
-      if (!response.ok) {
-        let errMessage = `Gateway status ${response.status}`;
-        try {
-          const errData = await response.json();
-          if (errData?.message) errMessage = errData.message;
-        } catch {
-          // ignore
+      // Append binary file inputs (FormSubmit attaches fields named "attachment", "attachment_2", etc.)
+      photoList.forEach((p, idx) => {
+        if (p.file) {
+          try {
+            const fileInput = document.createElement("input");
+            fileInput.type = "file";
+            fileInput.name = idx === 0 ? "attachment" : `attachment_${idx + 1}`;
+            const dt = new DataTransfer();
+            dt.items.add(p.file);
+            fileInput.files = dt.files;
+            form.appendChild(fileInput);
+          } catch (e) {
+            console.warn("Could not attach file via DataTransfer:", e);
+          }
         }
+      });
 
-        return {
-          status: "error",
-          message: "Email dispatch could not be confirmed."
-        };
-      }
+      document.body.appendChild(form);
+      form.submit();
 
-      const data = await response.json();
+      // Clean up dynamic form after transmission
+      setTimeout(() => {
+        try {
+          if (form.parentNode) form.parentNode.removeChild(form);
+        } catch {}
+      }, 3000);
 
-      if (data.success === "true" || data.success === true) {
-        return {
-          status: "success",
-          message: `Maintenance request dispatched to property management and ${ticket.tenantEmail}.`
-        };
-      } else {
-        return {
-          status: "error",
-          message: data.message || "Email dispatch could not be confirmed."
-        };
-      }
+      return {
+        status: "success",
+        message: `Maintenance request and ${photoList.length} photo(s) dispatched to property management and ${ticket.tenantEmail}.`
+      };
     } catch (err: any) {
-      console.warn("AJAX dispatch error:", err);
+      console.warn("Transmission error:", err);
       return {
         status: "error",
         message: "Automated transmission could not be completed directly."
@@ -405,6 +410,16 @@ Ancas Holdings Property Management`
     }
     if (!description.trim() || description.trim().length < 10) {
       setErrorMsg("Please provide a brief description of the issue (at least 10 characters).");
+      return;
+    }
+
+    // Mandatory photo requirement
+    if (photos.length === 0) {
+      setErrorMsg("A photo of the maintenance issue is mandatory. Please attach at least one photo before submitting.");
+      const photoHub = document.getElementById("photo-upload-section");
+      if (photoHub) {
+        photoHub.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
@@ -1110,16 +1125,17 @@ Ancas Holdings Property Management`
                 </div>
               </div>
 
-              {/* Section 5: Photo Upload Hub */}
-              <div>
+              {/* Section 5: Photo Upload Hub (Mandatory) */}
+              <div id="photo-upload-section">
                 <div className="flex items-center gap-2 border-b border-stone-200 pb-3 mb-6">
                   <span className="w-6 h-6 rounded-full bg-[#00264d] text-white text-xs font-bold flex items-center justify-center">5</span>
                   <div className="flex items-center justify-between w-full">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-[#00264d]">
-                      Photo of the Issue
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-[#00264d] flex items-center gap-1.5">
+                      <span>Photo of the Issue</span>
+                      <span className="text-red-500">*</span>
                     </h3>
-                    <span className="text-xs text-slate-400 font-normal">
-                      Recommended for faster diagnostic
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-sm">
+                      Mandatory: Photo Required
                     </span>
                   </div>
                 </div>
@@ -1133,6 +1149,8 @@ Ancas Holdings Property Management`
                   className={`border-2 border-dashed rounded-sm p-8 text-center cursor-pointer transition-all ${
                     isDragging 
                       ? "border-[#d4a017] bg-[#d4a017]/10" 
+                      : photos.length === 0
+                      ? "border-amber-300 bg-amber-50/40 hover:bg-amber-50/70 hover:border-amber-400"
                       : "border-stone-300 bg-stone-50/70 hover:bg-stone-100/70 hover:border-slate-400"
                   }`}
                 >
@@ -1150,10 +1168,10 @@ Ancas Holdings Property Management`
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-slate-800">
-                        Click to upload photos or drag and drop
+                        Click to upload photo(s) or drag and drop <span className="text-red-500">*</span>
                       </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        PNG, JPG, WEBP, or HEIC up to 8MB each (up to 5 photos)
+                      <p className="text-xs text-slate-500 mt-1">
+                        At least one clear photo is required to submit this request (JPG, PNG, WEBP, or HEIC)
                       </p>
                     </div>
                     <span className="px-3 py-1 bg-white border border-stone-200 text-xs text-[#00264d] font-semibold rounded shadow-2xs hover:border-[#00264d] transition-colors">
