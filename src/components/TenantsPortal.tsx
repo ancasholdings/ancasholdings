@@ -235,19 +235,57 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
     setPhotos(prev => prev.filter(p => p.id !== id));
   };
 
-  // Direct multipart form submission using FormSubmit AJAX API with native file uploads and status handling
+  // Direct multipart form submission using FormSubmit AJAX API with native file uploads and contractor-ready Work Order formatting
   const sendEmailDispatch = async (ticket: SubmittedTicket, photoList: PhotoItem[]) => {
     try {
+      const categoryShort = ticket.maintenanceType.split("(")[0].trim();
+      const priorityTag = ticket.urgencyLevel === "emergency" ? " [EMERGENCY]" : ticket.urgencyLevel === "urgent" ? " [URGENT]" : "";
+      const subjectLine = `[WORK ORDER #${ticket.ticketId}]${priorityTag} ${categoryShort} - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`;
+
+      const executiveContractorSummary = [
+        "============================================================",
+        "ANCAS HOLDINGS — MAINTENANCE WORK ORDER DISPATCH",
+        "============================================================",
+        `WORK ORDER ID   : ${ticket.ticketId}`,
+        `SUBMITTED DATE  : ${ticket.submittedAt}`,
+        `PRIORITY LEVEL  : ${ticket.urgencyLevel.toUpperCase()}`,
+        "",
+        "--- JOB SITE & LOCATION ---",
+        `Property        : ${ticket.propertyAddress}`,
+        `Unit / Apt #    : ${ticket.unitNumber}`,
+        `In-Unit Location: ${ticket.locationInUnit}`,
+        "",
+        "--- ACCESS & RESIDENT COORDINATION ---",
+        `Resident Name   : ${ticket.tenantName}`,
+        `Resident Phone  : ${ticket.tenantPhone}`,
+        `Resident Email  : ${ticket.tenantEmail}`,
+        `Permission Enter: ${ticket.permissionToEnter}`,
+        `Preferred Window: ${ticket.preferredTime}`,
+        "",
+        "--- SCOPE OF WORK ---",
+        `Trade Category  : ${ticket.maintenanceType}`,
+        "Issue Description:",
+        ticket.description,
+        "",
+        "--- ATTACHED MEDIA ---",
+        photoList.length > 0
+          ? `${photoList.length} photo(s) attached directly to this dispatch email (${photoList.map(p => p.name).join(", ")})`
+          : "No photos attached by resident",
+        "",
+        "--- CONTRACTOR INSTRUCTIONS ---",
+        `1. Please review scope and contact resident directly at ${ticket.tenantPhone} to confirm arrival schedule.`,
+        "2. If permission to enter without resident present is granted, verify key/lockbox access with property management.",
+        "3. Reply directly to this email with job estimate, arrival confirmation, and final completion invoice.",
+        "============================================================"
+      ].join("\n");
+
       const formData = new FormData();
-      formData.append(
-        "_subject",
-        `[Ticket #${ticket.ticketId}] Maintenance Request - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`
-      );
+      formData.append("_subject", subjectLine);
       formData.append("email", ticket.tenantEmail);
       formData.append("_replyto", ticket.tenantEmail);
       formData.append("_cc", ticket.tenantEmail);
       formData.append("_captcha", "false");
-      formData.append("_template", "table");
+      formData.append("_template", "box");
       formData.append(
         "_autoresponse",
         `Hello ${ticket.tenantName},
@@ -260,30 +298,42 @@ Thank you for your patience,
 Ancas Holdings Property Management`
       );
 
-      formData.append("Ticket ID", ticket.ticketId);
-      formData.append("Submitted Date", ticket.submittedAt);
-      formData.append("Tenant Full Name", ticket.tenantName);
-      formData.append("Tenant Email", ticket.tenantEmail);
-      formData.append("Tenant Phone", ticket.tenantPhone);
-      formData.append("Property Address", ticket.propertyAddress);
-      formData.append("Apartment / Unit Number", ticket.unitNumber);
-      formData.append("Maintenance Category", ticket.maintenanceType);
-      formData.append("Urgency Rating", ticket.urgencyLevel.toUpperCase());
-      formData.append("Location in Unit", ticket.locationInUnit);
-      formData.append("Permission to Enter", ticket.permissionToEnter);
-      formData.append("Preferred Service Window", ticket.preferredTime);
-      formData.append("Issue Description", ticket.description);
+      // Executive Contractor Summary Block (Prominent at top of email)
+      formData.append("CONTRACTOR WORK ORDER SUMMARY", executiveContractorSummary);
+
+      // Grouped, crystal-clear Work Order Data Fields
+      formData.append("[WORK ORDER] Ticket Number", ticket.ticketId);
+      formData.append("[WORK ORDER] Priority Rating", ticket.urgencyLevel.toUpperCase());
+      formData.append("[WORK ORDER] Date & Time Submitted", ticket.submittedAt);
+
+      formData.append("[JOB SITE] Property Address", ticket.propertyAddress);
+      formData.append("[JOB SITE] Apartment / Unit Number", ticket.unitNumber);
+      formData.append("[JOB SITE] Location in Unit", ticket.locationInUnit);
+
+      formData.append("[ACCESS & RESIDENT] Tenant Full Name", ticket.tenantName);
+      formData.append("[ACCESS & RESIDENT] Contact Phone (Direct)", ticket.tenantPhone);
+      formData.append("[ACCESS & RESIDENT] Tenant Email", ticket.tenantEmail);
+      formData.append("[ACCESS & RESIDENT] Permission to Enter", ticket.permissionToEnter);
+      formData.append("[ACCESS & RESIDENT] Preferred Service Window", ticket.preferredTime);
+
+      formData.append("[SCOPE OF WORK] Trade Category", ticket.maintenanceType);
+      formData.append("[SCOPE OF WORK] Issue Description", ticket.description);
 
       if (photoList.length > 0) {
-        formData.append("Attached Photos Count", `${photoList.length} photo(s) attached`);
+        formData.append("[ATTACHMENTS] Attached Photos", `${photoList.length} photo(s) attached directly to this email`);
         photoList.forEach((p, idx) => {
           if (p.file) {
             formData.append("attachment", p.file, p.name || `photo_${idx + 1}.jpg`);
           }
         });
       } else {
-        formData.append("Attached Photos Count", "None");
+        formData.append("[ATTACHMENTS] Attached Photos", "None");
       }
+
+      formData.append(
+        "[CONTRACTOR INSTRUCTIONS] Access & Estimate Protocol",
+        `Please coordinate entry with resident at ${ticket.tenantPhone}. Reply directly to this email with cost estimate, parts required, and completion sign-off.`
+      );
 
       // Submit via FormSubmit AJAX endpoint
       const response = await fetch("https://formsubmit.co/ajax/tudor@ancasholdings.com", {
@@ -506,7 +556,7 @@ Ancas Holdings Property Management`
         </div>
 
         {/* Emergency Notice Banner */}
-        <div className="mb-10 bg-amber-50/90 border-l-4 border-amber-500 p-5 rounded-r-sm shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="mb-4 bg-amber-50/90 border-l-4 border-amber-500 p-5 rounded-r-sm shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <ShieldAlert className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
             <div>
@@ -526,6 +576,67 @@ Ancas Holdings Property Management`
               <Phone className="w-3.5 h-3.5" />
               (773) 516-3148
             </a>
+          </div>
+        </div>
+
+        {/* Tenant Disclaimer: What Not to Submit */}
+        <div className="mb-10 bg-amber-50/90 border-l-4 border-amber-500 p-5 rounded-r-sm shadow-sm flex flex-col gap-3.5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-start gap-3.5">
+              <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h2 className="text-sm font-bold text-amber-900 uppercase tracking-wide">
+                  Tenant Disclaimer: What NOT to Submit for Maintenance
+                </h2>
+                <p className="text-xs md:text-sm text-amber-800 leading-relaxed mt-0.5">
+                  Routine home upkeep and day-to-day custodial responsibilities are handled directly by residents and should <strong>not</strong> be submitted as maintenance tickets. Please review before filing a request:
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 pl-9 md:pl-0">
+              <span className="inline-flex items-center px-3 py-1 bg-amber-200/80 border border-amber-300 text-amber-900 text-xs font-bold uppercase tracking-wider rounded-sm">
+                Resident Responsibilities
+              </span>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-3.5 border-t border-amber-200/80 text-xs text-amber-950">
+            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
+              <span className="font-bold text-amber-900 block mb-0.5">• Changing Light Bulbs</span>
+              <span className="text-amber-800">Replacing standard bulbs in interior fixtures, lamps, and track lights.</span>
+            </div>
+            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
+              <span className="font-bold text-amber-900 block mb-0.5">• Furnace Air Filters</span>
+              <span className="text-amber-800">Routine periodic replacement of furnace and HVAC unit air filters.</span>
+            </div>
+            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
+              <span className="font-bold text-amber-900 block mb-0.5">• Sweeping Lobbies & Stairwells</span>
+              <span className="text-amber-800">Keeping personal door thresholds, entry landings, and steps clean.</span>
+            </div>
+            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
+              <span className="font-bold text-amber-900 block mb-0.5">• Cleaning Trash & Debris</span>
+              <span className="text-amber-800">Disposing of personal household rubbish, delivery boxes, and food containers.</span>
+            </div>
+            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
+              <span className="font-bold text-amber-900 block mb-0.5">• Picking Up Animal Feces</span>
+              <span className="text-amber-800">Promptly picking up and bagging pet waste on property grounds or interior.</span>
+            </div>
+            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
+              <span className="font-bold text-amber-900 block mb-0.5">• Minor Toilet & Sink Clogs</span>
+              <span className="text-amber-800">Clearing simple toilet or drain backups using a standard plunger.</span>
+            </div>
+            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
+              <span className="font-bold text-amber-900 block mb-0.5">• Smoke Alarm & Thermostat Batteries</span>
+              <span className="text-amber-800">Replacing 9V or AA batteries when units emit a low-battery chirp.</span>
+            </div>
+            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
+              <span className="font-bold text-amber-900 block mb-0.5">• Tripped Outlets & Breakers</span>
+              <span className="text-amber-800">Pressing reset on GFCI wall outlets or resetting tripped electrical panel switches.</span>
+            </div>
+            <div className="bg-amber-100/60 p-2.5 rounded-sm border border-amber-200/80">
+              <span className="font-bold text-amber-900 block mb-0.5">• General Housekeeping</span>
+              <span className="text-amber-800">Standard cleaning, kitchen appliance surface wiping, and day-to-day tidiness.</span>
+            </div>
           </div>
         </div>
 
