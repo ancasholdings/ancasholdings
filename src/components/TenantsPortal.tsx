@@ -271,11 +271,6 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
         photoList.length > 0
           ? `${photoList.length} photo(s) attached directly to this dispatch email (${photoList.map(p => p.name).join(", ")})`
           : "No photos attached by resident",
-        "",
-        "--- CONTRACTOR INSTRUCTIONS ---",
-        `1. Please review scope and contact resident directly at ${ticket.tenantPhone} to confirm arrival schedule.`,
-        "2. If permission to enter without resident present is granted, verify key/lockbox access with property management.",
-        "3. Reply directly to this email with job estimate, arrival confirmation, and final completion invoice.",
         "============================================================"
       ].join("\n");
 
@@ -329,11 +324,6 @@ Ancas Holdings Property Management`
       } else {
         formData.append("[ATTACHMENTS] Attached Photos", "None");
       }
-
-      formData.append(
-        "[CONTRACTOR INSTRUCTIONS] Access & Estimate Protocol",
-        `Please coordinate entry with resident at ${ticket.tenantPhone}. Reply directly to this email with cost estimate, parts required, and completion sign-off.`
-      );
 
       // Submit via FormSubmit AJAX endpoint
       const response = await fetch("https://formsubmit.co/ajax/tudor@ancasholdings.com", {
