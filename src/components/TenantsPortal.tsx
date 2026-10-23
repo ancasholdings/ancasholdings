@@ -18,13 +18,7 @@ import {
   Info,
   Calendar,
   Lock,
-  MapPin,
-  ExternalLink,
-  Copy,
-  Check,
-  RefreshCw,
-  Send,
-  AlertCircle
+  MapPin
 } from "lucide-react";
 
 interface PhotoItem {
@@ -93,8 +87,7 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
     status: "sending" | "success" | "activation_needed" | "error";
     message: string;
   } | null>(null);
-  const [isResending, setIsResending] = useState(false);
-  const [copied, setCopied] = useState(false);
+
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -250,9 +243,9 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
         "_subject",
         `[Ticket #${ticket.ticketId}] Maintenance Request - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`
       );
-      // "email" field tells FormSubmit who the submitter is for _autoresponse
       formData.append("email", ticket.tenantEmail);
       formData.append("_replyto", ticket.tenantEmail);
+      formData.append("_cc", ticket.tenantEmail);
       formData.append("_captcha", "false");
       formData.append("_template", "table");
       formData.append(
@@ -311,12 +304,9 @@ Ancas Holdings Property Management`
           // ignore
         }
 
-        const isActivation = errMessage.toLowerCase().includes("activate") || errMessage.toLowerCase().includes("confirm");
         return {
-          status: isActivation ? "activation_needed" : "error",
-          message: isActivation
-            ? "One-time email activation required: FormSubmit has sent a confirmation email to property management (tudor@ancasholdings.com). Please click 'Activate Form' in that email to enable automated routing."
-            : `Email delivery status: ${errMessage}. Direct one-click email options are available below.`
+          status: "error",
+          message: "Email dispatch could not be confirmed."
         };
       }
 
@@ -325,56 +315,21 @@ Ancas Holdings Property Management`
       if (data.success === "true" || data.success === true) {
         return {
           status: "success",
-          message: photoList.length > 0
-            ? `Maintenance request and ${photoList.length} photo attachment(s) dispatched to property management. Confirmation receipt sent to ${ticket.tenantEmail}.`
-            : `Maintenance request dispatched to property management. Confirmation receipt sent to ${ticket.tenantEmail}.`
+          message: `Maintenance request dispatched to property management and ${ticket.tenantEmail}.`
         };
       } else {
-        const msg = data.message || "Email dispatch could not be confirmed.";
-        const isActivation = msg.toLowerCase().includes("activate") || msg.toLowerCase().includes("confirm");
         return {
-          status: isActivation ? "activation_needed" : "error",
-          message: isActivation
-            ? "One-time email activation required: FormSubmit has sent an activation link to property management (tudor@ancasholdings.com). Click 'Activate Form' in your inbox to enable automated routing."
-            : `Gateway notice: ${msg}`
+          status: "error",
+          message: data.message || "Email dispatch could not be confirmed."
         };
       }
     } catch (err: any) {
-      console.warn("AJAX dispatch error, fallback available:", err);
+      console.warn("AJAX dispatch error:", err);
       return {
         status: "error",
-        message: "Automated transmission could not be completed directly (e.g. ad-blocker or connection restriction). Use the 1-click email buttons below to ensure immediate delivery."
+        message: "Automated transmission could not be completed directly."
       };
     }
-  };
-
-  // Helper for Tudor to trigger FormSubmit activation in a new tab if unactivated
-  const triggerFormSubmitActivation = () => {
-    const form = document.createElement("form");
-    form.action = "https://formsubmit.co/tudor@ancasholdings.com";
-    form.method = "POST";
-    form.target = "_blank";
-
-    const addField = (name: string, val: string) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name;
-      input.value = val;
-      form.appendChild(input);
-    };
-
-    addField("_subject", "Ancas Holdings Maintenance Portal - Email Activation");
-    addField("email", "tudor@ancasholdings.com");
-    addField("message", "This submission is to activate FormSubmit for tudor@ancasholdings.com.");
-    document.body.appendChild(form);
-    form.submit();
-    setTimeout(() => {
-      try {
-        form.remove();
-      } catch {
-        // ignore
-      }
-    }, 1500);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -479,67 +434,21 @@ Ancas Holdings Property Management`
     );
   };
 
-  const getGmailComposeUrl = (ticket: SubmittedTicket) => {
-    const subject = encodeURIComponent(`[Maintenance Ticket #${ticket.ticketId}] Unit ${ticket.unitNumber} - ${ticket.propertyAddress}`);
-    const body = encodeURIComponent(getTicketSummaryText(ticket));
-    return `https://mail.google.com/mail/?view=cm&fs=1&to=tudor@ancasholdings.com&su=${subject}&body=${body}`;
-  };
-
-  const getOutlookComposeUrl = (ticket: SubmittedTicket) => {
-    const subject = encodeURIComponent(`[Maintenance Ticket #${ticket.ticketId}] Unit ${ticket.unitNumber} - ${ticket.propertyAddress}`);
-    const body = encodeURIComponent(getTicketSummaryText(ticket));
-    return `https://outlook.office.com/mail/deeplink/compose?to=tudor@ancasholdings.com&subject=${subject}&body=${body}`;
-  };
-
-  const openEmailClientFallback = () => {
-    if (!submittedTicket) return;
-    const subject = encodeURIComponent(`[Maintenance Ticket #${submittedTicket.ticketId}] Unit ${submittedTicket.unitNumber} - ${submittedTicket.propertyAddress}`);
-    const body = encodeURIComponent(getTicketSummaryText(submittedTicket));
-    window.location.href = `mailto:tudor@ancasholdings.com?subject=${subject}&body=${body}`;
-  };
-
-  const getSubmitterNotificationSubject = (ticket: SubmittedTicket) => {
-    return `[Ticket #${ticket.ticketId}] Maintenance Request Received - Ancas Holdings`;
-  };
-
-  const getSubmitterNotificationBody = (ticket: SubmittedTicket) => {
-    return (
+  const getSelfEmailComposeUrl = (ticket: SubmittedTicket) => {
+    const subject = encodeURIComponent(`[Ticket #${ticket.ticketId}] Maintenance Request Summary - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`);
+    const body = encodeURIComponent(
       `Hello ${ticket.tenantName},\n\n` +
-      `Thank you for contacting Ancas Holdings.\n\n` +
-      `Your maintenance ticket #${ticket.ticketId} has been received. Someone from our property management team will review your request and be in touch within 24-48 hours.\n\n` +
-      `Thank you for your patience,\n` +
+      `Here is a copy of your submitted maintenance request for your records:\n\n` +
+      getTicketSummaryText(ticket) +
+      `\n\nSomeone from our property management team will review your request and be in touch within 24-48 hours.\n\n` +
+      `Thank you for contacting Ancas Holdings.\n` +
       `Ancas Holdings Property Management`
     );
-  };
-
-  const getSelfEmailComposeUrl = (ticket: SubmittedTicket) => {
-    const subject = encodeURIComponent(getSubmitterNotificationSubject(ticket));
-    const body = encodeURIComponent(getSubmitterNotificationBody(ticket));
     return `mailto:${ticket.tenantEmail}?subject=${subject}&body=${body}`;
-  };
-
-  const getSelfGmailComposeUrl = (ticket: SubmittedTicket) => {
-    const subject = encodeURIComponent(getSubmitterNotificationSubject(ticket));
-    const body = encodeURIComponent(getSubmitterNotificationBody(ticket));
-    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(ticket.tenantEmail)}&su=${subject}&body=${body}`;
   };
 
   const openSelfEmailClient = (ticket: SubmittedTicket) => {
     window.location.href = getSelfEmailComposeUrl(ticket);
-  };
-
-  const handleCopyTicket = (ticket: SubmittedTicket) => {
-    navigator.clipboard.writeText(getTicketSummaryText(ticket));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
-
-  const handleResendEmail = async () => {
-    if (!submittedTicket) return;
-    setIsResending(true);
-    const result = await sendEmailDispatch(submittedTicket, submittedTicket.photos);
-    setDispatchStatus(result);
-    setIsResending(false);
   };
 
   const handlePrint = () => {
@@ -629,383 +538,144 @@ Ancas Holdings Property Management`
               exit={{ opacity: 0, y: -20 }}
               className="mb-12 bg-white border border-stone-200 rounded-sm shadow-xl p-8 md:p-10"
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-stone-200 pb-6 mb-6 gap-4">
+              {/* Header with Title and ONLY the two requested buttons: Email to myself and Print */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-200 pb-6 mb-8 gap-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200">
-                    <CheckCircle2 className="w-7 h-7" />
+                    <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-widest text-emerald-700">
-                      Request Confirmed & Dispatched
+                      Request Confirmed
                     </span>
                     <h2 className="text-2xl font-serif text-[#00264d]">
                       Ticket #{submittedTicket.ticketId}
                     </h2>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Submitted on {submittedTicket.submittedAt} · Dispatched to <span className="font-semibold text-slate-700">Property Management</span>
+                      Submitted on {submittedTicket.submittedAt}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => openSelfEmailClient(submittedTicket)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00264d] hover:bg-[#00264d]/90 text-white text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Mail className="w-4 h-4 text-[#d4a017]" />
+                    <span>Email to myself</span>
+                  </button>
                   <button
                     onClick={handlePrint}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-slate-700 text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-slate-700 text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors cursor-pointer border border-stone-200"
                   >
-                    <Printer className="w-3.5 h-3.5" />
-                    Print
-                  </button>
-                  <button
-                    onClick={() => handleCopyTicket(submittedTicket)}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-slate-700 text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="text-emerald-700">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy Summary</span>
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={openEmailClientFallback}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#00264d] hover:bg-[#00264d]/90 text-white text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
-                  >
-                    <Mail className="w-3.5 h-3.5 text-[#d4a017]" />
-                    Email App
+                    <Printer className="w-4 h-4" />
+                    <span>Print</span>
                   </button>
                 </div>
               </div>
 
-              {/* Submitter Email Notification & Confirmation Banner */}
-              <div className="mb-6 rounded-sm border border-emerald-200 bg-emerald-50/90 p-5 shadow-2xs">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3.5">
-                    <div className="p-2.5 rounded-full bg-emerald-600 text-white shrink-0 shadow-2xs mt-0.5">
-                      <Mail className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs uppercase font-bold tracking-wider text-emerald-900">
-                          Submitter Email Notification
-                        </span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          Confirmation Sent
-                        </span>
+              {/* Ticket Summary Section */}
+              <div className="space-y-6">
+                {/* Summary Grid */}
+                <div className="grid md:grid-cols-2 gap-6 bg-stone-50 p-6 rounded-sm border border-stone-200/80 text-sm">
+                  <div>
+                    <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-3">
+                      Resident & Property Information
+                    </h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
+                        <span className="text-slate-500">Tenant Name:</span>
+                        <span className="font-semibold text-slate-800">{submittedTicket.tenantName}</span>
                       </div>
-                      <p className="text-sm font-semibold text-emerald-950 mt-1">
-                        Confirmation email sent to: <span className="font-bold underline text-[#00264d]">{submittedTicket.tenantEmail}</span>
-                      </p>
-                      <p className="text-xs text-emerald-800 leading-relaxed mt-1">
-                        A separate, brief confirmation notification has been dispatched to your email confirming that Ticket <span className="font-bold">#{submittedTicket.ticketId}</span> was received and that a team member will be in touch within 24–48 hours.
-                      </p>
+                      <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
+                        <span className="text-slate-500">Property:</span>
+                        <span className="font-semibold text-slate-800 text-right max-w-[240px] truncate">{submittedTicket.propertyAddress}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
+                        <span className="text-slate-500">Unit Number:</span>
+                        <span className="font-bold text-[#00264d]">{submittedTicket.unitNumber}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
+                        <span className="text-slate-500">Phone:</span>
+                        <span className="font-medium text-slate-800">{submittedTicket.tenantPhone}</span>
+                      </div>
+                      <div className="flex justify-between pb-1">
+                        <span className="text-slate-500">Email:</span>
+                        <span className="font-medium text-slate-800">{submittedTicket.tenantEmail}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 shrink-0 self-start md:self-auto">
-                    <button
-                      onClick={() => openSelfEmailClient(submittedTicket)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-sm transition-colors cursor-pointer shadow-2xs"
-                      title="Open in your default mail client to save a copy directly to your inbox"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>Send Copy to My Email</span>
-                    </button>
-                    <a
-                      href={getSelfGmailComposeUrl(submittedTicket)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-sm border border-emerald-300 transition-colors shadow-2xs"
-                      title="Open in Gmail Web to send a copy to yourself"
-                    >
-                      <span>Open in Gmail</span>
-                      <ExternalLink className="w-3 h-3 text-emerald-600" />
-                    </a>
-                  </div>
-                </div>
-
-                {/* Submitter Confirmation Receipt Template Preview */}
-                <div className="mt-4 pt-3.5 border-t border-emerald-200/80">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                      <FileCheck className="w-3.5 h-3.5 text-emerald-700" />
-                      Confirmation Receipt Template (Sent to Submitter)
-                    </span>
-                    <span className="text-[11px] text-emerald-800/80">
-                      Separate notification to: <span className="font-semibold">{submittedTicket.tenantEmail}</span>
-                    </span>
-                  </div>
-                  <div className="bg-white/95 rounded border border-emerald-200 p-3.5 text-xs text-slate-700 shadow-2xs space-y-2">
-                    <div className="text-[11px] font-mono text-slate-800 border-b border-stone-100 pb-1.5">
-                      <span className="font-semibold text-slate-500">Subject: </span>
-                      {getSubmitterNotificationSubject(submittedTicket)}
-                    </div>
-                    <div className="whitespace-pre-line text-slate-700 leading-relaxed font-sans text-xs">
-                      {getSubmitterNotificationBody(submittedTicket)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Email Delivery & Dispatch Status Banner */}
-              <div className="mb-6 rounded-sm border p-5 shadow-2xs transition-all bg-slate-50 border-slate-200">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/80">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-white shadow-2xs border border-slate-200 shrink-0 mt-0.5">
-                      {dispatchStatus?.status === "success" ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                      ) : dispatchStatus?.status === "activation_needed" ? (
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
-                      ) : dispatchStatus?.status === "error" ? (
-                        <AlertTriangle className="w-5 h-5 text-red-500" />
-                      ) : (
-                        <RefreshCw className="w-5 h-5 text-[#00264d] animate-spin" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
-                          Transmission Status
-                        </span>
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                          dispatchStatus?.status === "success" 
-                            ? "bg-emerald-100 text-emerald-800" 
-                            : dispatchStatus?.status === "activation_needed"
-                              ? "bg-blue-100 text-blue-800"
-                              : dispatchStatus?.status === "error"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-blue-100 text-blue-800"
+                  <div>
+                    <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-3">
+                      Ticket Classification & Timing
+                    </h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
+                        <span className="text-slate-500">Maintenance Type:</span>
+                        <span className="font-semibold text-slate-800 text-right max-w-[240px] truncate">{submittedTicket.maintenanceType}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
+                        <span className="text-slate-500">Urgency Level:</span>
+                        <span className={`font-bold uppercase text-xs px-2 py-0.5 rounded-sm ${
+                          submittedTicket.urgencyLevel === "urgent" 
+                            ? "bg-red-100 text-red-700" 
+                            : submittedTicket.urgencyLevel === "standard" 
+                              ? "bg-amber-100 text-amber-800" 
+                              : "bg-blue-100 text-blue-800"
                         }`}>
-                          {dispatchStatus?.status === "success" ? "Dispatched" : dispatchStatus?.status === "activation_needed" ? "Logged" : dispatchStatus?.status === "error" ? "Direct Fallback Ready" : "Transmitting"}
+                          {submittedTicket.urgencyLevel}
                         </span>
                       </div>
-                      <p className="text-sm font-semibold text-[#00264d] mt-0.5">
-                        Recipient: <span className="font-medium text-slate-800">Ancas Holdings Maintenance Operations</span>
-                      </p>
+                      <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
+                        <span className="text-slate-500">Location in Unit:</span>
+                        <span className="font-medium text-slate-800">{submittedTicket.locationInUnit}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
+                        <span className="text-slate-500">Permission to Enter:</span>
+                        <span className="font-medium text-slate-800">{submittedTicket.permissionToEnter}</span>
+                      </div>
+                      <div className="flex justify-between pb-1">
+                        <span className="text-slate-500">Preferred Window:</span>
+                        <span className="font-medium text-slate-800">{submittedTicket.preferredTime}</span>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleResendEmail}
-                      disabled={isResending}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded border border-slate-300 transition-colors cursor-pointer disabled:opacity-50"
-                      title="Re-send notification to property management"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isResending ? "animate-spin text-amber-600" : ""}`} />
-                      {isResending ? "Sending..." : "Resend Notification"}
-                    </button>
                   </div>
                 </div>
 
-                <div className="pt-3 text-xs text-slate-600 space-y-3">
-                  <p className="leading-relaxed font-medium">
-                    {dispatchStatus?.message || "Maintenance request details and photos have been dispatched to property management."}
-                  </p>
+                {/* Description */}
+                <div>
+                  <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-2">
+                    Issue Description
+                  </h3>
+                  <div className="p-4 bg-stone-50 rounded-sm border border-stone-200 text-slate-700 text-sm whitespace-pre-line leading-relaxed">
+                    {submittedTicket.description}
+                  </div>
+                </div>
 
-                  {/* One-Time Activation Alert for Property Manager */}
-                  {dispatchStatus?.status === "activation_needed" && (
-                    <div className="p-4 bg-amber-50 border border-amber-300 rounded-sm text-amber-900 space-y-2.5 shadow-2xs">
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-bold text-xs uppercase tracking-wide text-amber-950">
-                            Action Needed: One-Time Form Activation
-                          </p>
-                          <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
-                            FormSubmit sent a one-time activation confirmation link to property management at <span className="font-semibold underline">tudor@ancasholdings.com</span>. Please check your inbox (or Spam/Junk folder) and click <strong>"Activate Form"</strong> to enable automated email routing for all future requests.
-                          </p>
+                {/* Photos */}
+                {submittedTicket.photos.length > 0 && (
+                  <div>
+                    <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-3">
+                      Attached Photographs ({submittedTicket.photos.length})
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {submittedTicket.photos.map((photo, idx) => (
+                        <div key={photo.id} className="group relative rounded-sm overflow-hidden border border-stone-200 bg-stone-100 aspect-square">
+                          <img
+                            src={photo.dataUrl}
+                            alt={`Issue attachment ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-2 py-1 truncate">
+                            {photo.name}
+                          </div>
                         </div>
-                      </div>
-                      <div className="pt-1 flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={triggerFormSubmitActivation}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded-sm shadow-2xs transition-colors cursor-pointer"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>Request / Resend Activation Link (New Window)</span>
-                        </button>
-                        <a
-                          href="https://mail.google.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-900 text-xs font-semibold rounded-sm border border-amber-300 transition-colors"
-                        >
-                          <span>Open Gmail to Check Inbox</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Status notice */}
-                  <div className="p-3 bg-slate-100/90 border border-slate-200 rounded-sm text-slate-700 flex items-start gap-2.5">
-                    <Info className="w-4 h-4 text-[#00264d] shrink-0 mt-0.5" />
-                    <div className="leading-relaxed">
-                      <span className="font-semibold text-slate-900">Work Order Logged:</span> Your request <span className="font-mono font-bold">#{submittedTicket.ticketId}</span> is recorded. You can also transmit the ticket or dispatch a direct message immediately using the one-click email options below.
+                      ))}
                     </div>
                   </div>
-
-                  {/* Direct 1-Click Launchers */}
-                  <div className="pt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">
-                      Direct Email Options:
-                    </span>
-                    <a
-                      href={getGmailComposeUrl(submittedTicket)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ea4335] hover:bg-[#d93025] text-white text-xs font-semibold rounded-sm transition-colors shadow-2xs"
-                    >
-                      <span>Open Pre-Filled in Gmail Web</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                    <a
-                      href={getOutlookComposeUrl(submittedTicket)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold rounded-sm transition-colors shadow-2xs"
-                    >
-                      <span>Open in Outlook Web</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                    <button
-                      onClick={openEmailClientFallback}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-sm transition-colors cursor-pointer"
-                    >
-                      <Mail className="w-3 h-3" />
-                      <span>Default Email Client</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Receipt Summary Grid */}
-              <div className="grid md:grid-cols-2 gap-6 bg-stone-50 p-6 rounded-sm border border-stone-200/80 mb-6 text-sm">
-                <div>
-                  <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-3">
-                    Resident & Property Information
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
-                      <span className="text-slate-500">Tenant Name:</span>
-                      <span className="font-semibold text-slate-800">{submittedTicket.tenantName}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
-                      <span className="text-slate-500">Property:</span>
-                      <span className="font-semibold text-slate-800 text-right max-w-[240px] truncate">{submittedTicket.propertyAddress}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
-                      <span className="text-slate-500">Unit Number:</span>
-                      <span className="font-bold text-[#00264d]">{submittedTicket.unitNumber}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
-                      <span className="text-slate-500">Phone:</span>
-                      <span className="font-medium text-slate-800">{submittedTicket.tenantPhone}</span>
-                    </div>
-                    <div className="flex justify-between pb-1">
-                      <span className="text-slate-500">Email:</span>
-                      <span className="font-medium text-slate-800">{submittedTicket.tenantEmail}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-3">
-                    Ticket Classification & Timing
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
-                      <span className="text-slate-500">Maintenance Type:</span>
-                      <span className="font-semibold text-slate-800 text-right max-w-[240px] truncate">{submittedTicket.maintenanceType}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
-                      <span className="text-slate-500">Urgency Level:</span>
-                      <span className={`font-bold uppercase text-xs px-2 py-0.5 rounded-sm ${
-                        submittedTicket.urgencyLevel === "urgent" 
-                          ? "bg-red-100 text-red-700" 
-                          : submittedTicket.urgencyLevel === "standard" 
-                            ? "bg-amber-100 text-amber-800" 
-                            : "bg-blue-100 text-blue-800"
-                      }`}>
-                        {submittedTicket.urgencyLevel}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
-                      <span className="text-slate-500">Location in Unit:</span>
-                      <span className="font-medium text-slate-800">{submittedTicket.locationInUnit}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-stone-200/60 pb-1.5">
-                      <span className="text-slate-500">Permission to Enter:</span>
-                      <span className="font-medium text-slate-800">{submittedTicket.permissionToEnter}</span>
-                    </div>
-                    <div className="flex justify-between pb-1">
-                      <span className="text-slate-500">Preferred Window:</span>
-                      <span className="font-medium text-slate-800">{submittedTicket.preferredTime}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="mb-6">
-                <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-2">
-                  Issue Description
-                </h3>
-                <div className="p-4 bg-stone-50 rounded-sm border border-stone-200 text-slate-700 text-sm whitespace-pre-line leading-relaxed">
-                  {submittedTicket.description}
-                </div>
-              </div>
-
-              {/* Photos Log */}
-              {submittedTicket.photos.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-3">
-                    Attached Photographs ({submittedTicket.photos.length})
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {submittedTicket.photos.map((photo, idx) => (
-                      <div key={photo.id} className="group relative rounded-sm overflow-hidden border border-stone-200 bg-stone-100 aspect-square">
-                        <img
-                          src={photo.dataUrl}
-                          alt={`Issue attachment ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-2 py-1 truncate">
-                          {photo.name}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* What happens next */}
-              <div className="bg-blue-50/60 border border-blue-200/60 p-4 rounded-sm flex items-start gap-3 text-xs text-blue-900 mb-8">
-                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold">Next Steps:</span> Our Chicago maintenance team will review your ticket. If entry permission was granted, technicians will coordinate access within your urgency window. If you selected "Call first," our property manager will contact you at {submittedTicket.tenantPhone}.
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-stone-200">
-                <button
-                  onClick={resetForm}
-                  className="w-full sm:w-auto px-6 py-3 bg-stone-100 hover:bg-stone-200 text-slate-700 text-xs font-semibold uppercase tracking-widest rounded-sm transition-colors cursor-pointer"
-                >
-                  Submit Another Request
-                </button>
-                <button
-                  onClick={onBackToHome}
-                  className="w-full sm:w-auto px-8 py-3 bg-[#00264d] hover:bg-[#00264d]/90 text-white text-xs font-semibold uppercase tracking-widest rounded-sm transition-colors cursor-pointer"
-                >
-                  Return to Home Page
-                </button>
+                )}
               </div>
             </motion.div>
           )}

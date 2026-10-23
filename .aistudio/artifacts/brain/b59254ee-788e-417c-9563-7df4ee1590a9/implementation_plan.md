@@ -20,3 +20,11 @@
   - **Added Activation Detection & Self-Serve Launcher**: The app now detects whether FormSubmit returns an `activation_needed` state and presents a clear, one-click button to trigger/resend the FormSubmit activation email to `tudor@ancasholdings.com`.
   - **Guaranteed Zero-Data-Loss Fallback**: Added immediate 1-click mail launchers (Gmail Web, Outlook Web, and default email client) pre-filled with the exact ticket summary and attachments count for management, and separate 1-click copy launchers for the submitter.
 - [x] Verified full build compilation and linting tests pass.
+- [x] Fixed submitter email delivery: FormSubmit explicitly disables `_autoresponse` for AJAX forms (`https://formsubmit.co/ajax/...`). Added `_cc: ticket.tenantEmail` to `FormData` so FormSubmit automatically delivers a full copy of the work order submission to the tenant's email address in addition to `tudor@ancasholdings.com`.
+- [x] Streamlined and cleaned up the ticket confirmation screen:
+  - Removed all clutter, debug alerts, activation prompts, transmission status banners, receipt previews, and third-party email client buttons.
+  - Retained strictly:
+    1. Ticket Summary (Resident contact info, Property & Unit, Maintenance Classification & Urgency, Issue Description, Attached Photos).
+    2. **Print** button (`window.print()`).
+    3. **Email to myself** button (`mailto:` link pre-filled with ticket number, summary, and 24-48h notice).
+

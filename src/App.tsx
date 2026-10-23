@@ -311,10 +311,10 @@ const About = () => {
             </h2>
             <div className="space-y-6 text-slate-600 leading-relaxed">
               <p className="text-lg font-medium text-slate-800">
-                Tudor Ancas founded Ancas Holdings with a clear mission to innovate within the real estate sector and redefine the standards of urban living.
+                Tudor founded Ancas Holdings with a clear mission to innovate within the real estate sector and redefine the standards of urban living.
               </p>
               <p>
-                As Principal, he leverages a deep understanding of market dynamics and a commitment to operational excellence to lead the firm’s strategic investments in the North and Northwest Chicago areas.
+                As CEO, he leverages a deep understanding of market dynamics and a commitment to operational excellence to lead the firm’s strategic investments in the North and Northwest Chicago areas.
               </p>
               <p>
                 Tudor is dedicated to spearheading investment strategies that prioritize high-quality housing and superior property management, ensuring every asset reflects a culture of service excellence. By cultivating strong stakeholder relationships, he focuses on driving sustainable growth that creates a lasting, positive impact on the communities where Ancas Holdings operates.
