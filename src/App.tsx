@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, FormEvent } from "react";
 import { TenantsPortal } from "./components/TenantsPortal";
+import { AvailabilityPortal } from "./components/AvailabilityPortal";
 
 // --- Components ---
 
@@ -91,12 +92,13 @@ const Logo = ({ className = "", onClick }: { className?: string; onClick?: () =>
 };
 
 interface NavbarProps {
-  activeView: "home" | "tenants";
+  activeView: "home" | "availability" | "tenants";
   onNavigateHome: (hashTarget?: string) => void;
+  onNavigateAvailability: () => void;
   onNavigateTenants: () => void;
 }
 
-const Navbar = ({ activeView, onNavigateHome, onNavigateTenants }: NavbarProps) => {
+const Navbar = ({ activeView, onNavigateHome, onNavigateAvailability, onNavigateTenants }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -127,6 +129,15 @@ const Navbar = ({ activeView, onNavigateHome, onNavigateTenants }: NavbarProps) 
             className="text-sm font-medium tracking-widest uppercase transition-colors hover:text-accent text-primary/70 hover:text-primary cursor-pointer"
           >
             About
+          </button>
+
+          <button
+            onClick={onNavigateAvailability}
+            className={`text-sm font-medium tracking-widest uppercase transition-colors hover:text-accent cursor-pointer ${
+              activeView === "availability" ? "text-primary font-bold border-b-2 border-[#d4a017] pb-0.5" : "text-primary/70"
+            }`}
+          >
+            Availability
           </button>
 
           <button
@@ -194,6 +205,16 @@ const Navbar = ({ activeView, onNavigateHome, onNavigateTenants }: NavbarProps) 
           <button
             onClick={() => {
               setIsMobileMenuOpen(false);
+              onNavigateAvailability();
+            }}
+            className="text-left text-lg font-serif text-primary border-b border-slate-100 pb-2 font-bold text-[#00264d] cursor-pointer"
+          >
+            Availability
+          </button>
+
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
               onNavigateTenants();
             }}
             className="text-left text-lg font-serif text-primary border-b border-slate-100 pb-2 font-bold text-[#00264d] flex items-center justify-between cursor-pointer"
@@ -217,7 +238,13 @@ const Navbar = ({ activeView, onNavigateHome, onNavigateTenants }: NavbarProps) 
   );
 };
 
-const Hero = ({ onNavigateTenants }: { onNavigateTenants?: () => void }) => {
+const Hero = ({ 
+  onNavigateTenants, 
+  onNavigateAvailability 
+}: { 
+  onNavigateTenants?: () => void;
+  onNavigateAvailability?: () => void;
+}) => {
   return (
     <section id="home" className="relative min-h-screen flex items-center bg-stone-50 scroll-mt-32 overflow-hidden">
       <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pt-32 md:pt-40 grid lg:grid-cols-2 gap-12 items-center">
@@ -239,17 +266,19 @@ const Hero = ({ onNavigateTenants }: { onNavigateTenants?: () => void }) => {
             We specialize in identifying high-potential assets where strategic management and thoughtful capital improvements can drive long-term value for our investors. Beyond the bottom line, our mission is rooted in the belief that quality housing is a cornerstone of a thriving neighborhood; by revitalizing these properties, we aim to elevate living standards for our residents and contribute to the overall strength and vibrancy of the communities we serve.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            {onNavigateAvailability && (
+              <button 
+                onClick={onNavigateAvailability} 
+                className="bg-primary text-white px-8 py-4 text-sm font-medium uppercase tracking-widest hover:bg-primary/90 transition-all flex items-center justify-center cursor-pointer shadow-sm"
+              >
+                View Availability
+              </button>
+            )}
             <a 
               href="#about" 
-              className="bg-primary text-white px-8 py-4 text-sm font-medium uppercase tracking-widest hover:bg-primary/90 transition-all flex items-center justify-center"
-            >
-              Our Strategy
-            </a>
-            <a 
-              href="#contact" 
               className="border border-primary text-primary px-8 py-4 text-sm font-medium uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center justify-center"
             >
-              Get in Touch
+              Our Strategy
             </a>
           </div>
           {onNavigateTenants && (
@@ -548,10 +577,11 @@ const Contact = () => {
 
 interface FooterProps {
   onNavigateHome: (hashTarget?: string) => void;
+  onNavigateAvailability: () => void;
   onNavigateTenants: () => void;
 }
 
-const Footer = ({ onNavigateHome, onNavigateTenants }: FooterProps) => {
+const Footer = ({ onNavigateHome, onNavigateAvailability, onNavigateTenants }: FooterProps) => {
   return (
     <footer className="bg-stone-50 text-primary py-16 border-t border-stone-200/50">
       <div className="max-w-7xl mx-auto px-6">
@@ -579,6 +609,15 @@ const Footer = ({ onNavigateHome, onNavigateTenants }: FooterProps) => {
                   className="hover:text-accent transition-colors cursor-pointer text-left"
                 >
                   About Us
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={onNavigateAvailability} 
+                  className="hover:text-accent font-semibold text-[#00264d] transition-colors cursor-pointer text-left flex items-center gap-1.5"
+                >
+                  <span>Availability</span>
+                  <span className="text-[9px] px-1.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold uppercase rounded">Properties</span>
                 </button>
               </li>
               <li>
@@ -621,14 +660,21 @@ const Footer = ({ onNavigateHome, onNavigateTenants }: FooterProps) => {
 };
 
 export default function App() {
-  const [activeView, setActiveView] = useState<"home" | "tenants">(() => {
-    return typeof window !== "undefined" && window.location.hash === "#tenants" ? "tenants" : "home";
+  const [activeView, setActiveView] = useState<"home" | "availability" | "tenants">(() => {
+    if (typeof window !== "undefined") {
+      if (window.location.hash === "#tenants") return "tenants";
+      if (window.location.hash === "#availability") return "availability";
+    }
+    return "home";
   });
 
   useEffect(() => {
     const handleHashChange = () => {
       if (window.location.hash === "#tenants") {
         setActiveView("tenants");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (window.location.hash === "#availability") {
+        setActiveView("availability");
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         setActiveView("home");
@@ -651,6 +697,12 @@ export default function App() {
     }
   };
 
+  const navigateToAvailability = () => {
+    setActiveView("availability");
+    window.location.hash = "#availability";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const navigateToTenants = () => {
     setActiveView("tenants");
     window.location.hash = "#tenants";
@@ -662,14 +714,23 @@ export default function App() {
       <Navbar 
         activeView={activeView}
         onNavigateHome={navigateToHome}
+        onNavigateAvailability={navigateToAvailability}
         onNavigateTenants={navigateToTenants}
       />
       <main>
         {activeView === "tenants" ? (
           <TenantsPortal onBackToHome={() => navigateToHome("#home")} />
+        ) : activeView === "availability" ? (
+          <AvailabilityPortal 
+            onBackToHome={() => navigateToHome("#home")} 
+            onNavigateTenants={navigateToTenants}
+          />
         ) : (
           <>
-            <Hero onNavigateTenants={navigateToTenants} />
+            <Hero 
+              onNavigateTenants={navigateToTenants} 
+              onNavigateAvailability={navigateToAvailability}
+            />
             <About />
             <Contact />
           </>
@@ -677,6 +738,7 @@ export default function App() {
       </main>
       <Footer 
         onNavigateHome={navigateToHome}
+        onNavigateAvailability={navigateToAvailability}
         onNavigateTenants={navigateToTenants}
       />
     </div>
