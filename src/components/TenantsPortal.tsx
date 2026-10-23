@@ -242,54 +242,22 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
     setPhotos(prev => prev.filter(p => p.id !== id));
   };
 
-  // Robust multipart form submission for FormSubmit with native attachment parsing
+  // Direct multipart form submission using FormSubmit AJAX API with native file uploads and status handling
   const sendEmailDispatch = async (ticket: SubmittedTicket, photoList: PhotoItem[]) => {
-    return new Promise<{ status: "success" | "activation_needed" | "error"; message: string }>((resolve) => {
-      try {
-        // Ensure hidden iframe exists in DOM to receive FormSubmit response without navigating away
-        let iframe = document.getElementById("formsubmit_target_frame") as HTMLIFrameElement | null;
-        if (!iframe) {
-          iframe = document.createElement("iframe");
-          iframe.id = "formsubmit_target_frame";
-          iframe.name = "formsubmit_target_frame";
-          iframe.style.display = "none";
-          document.body.appendChild(iframe);
-        }
-
-        // Clean up any existing hidden form
-        const existingForm = document.getElementById("formsubmit_dispatch_form");
-        if (existingForm) {
-          existingForm.remove();
-        }
-
-        // FormSubmit.co requires standard multipart/form-data POST with field name "attachment"
-        // FormSubmit's /ajax/ endpoint strips file attachments, so standard form POST targeted to hidden iframe is required.
-        const form = document.createElement("form");
-        form.id = "formsubmit_dispatch_form";
-        form.action = "https://formsubmit.co/tudor@ancasholdings.com";
-        form.method = "POST";
-        form.enctype = "multipart/form-data";
-        form.target = "formsubmit_target_frame";
-        form.style.display = "none";
-
-        const addField = (name: string, value: string) => {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = name;
-          input.value = value;
-          form.appendChild(input);
-        };
-
-        addField("_subject", `[Ticket #${ticket.ticketId}] Maintenance Request - Unit ${ticket.unitNumber}, ${ticket.propertyAddress} (${ticket.urgencyLevel.toUpperCase()})`);
-        // Crucial for FormSubmit: the input named "email" triggers FormSubmit's _autoresponse to the person submitting
-        addField("email", ticket.tenantEmail);
-        addField("_replyto", ticket.tenantEmail);
-        // Notice: Submission goes directly to tudor@ancasholdings.com; no _cc so submitter receives only the separate brief confirmation notification
-        addField("_captcha", "false");
-        addField("_template", "table");
-        addField(
-          "_autoresponse",
-          `Hello ${ticket.tenantName},
+    try {
+      const formData = new FormData();
+      formData.append(
+        "_subject",
+        `[Ticket #${ticket.ticketId}] Maintenance Request - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`
+      );
+      // "email" field tells FormSubmit who the submitter is for _autoresponse
+      formData.append("email", ticket.tenantEmail);
+      formData.append("_replyto", ticket.tenantEmail);
+      formData.append("_captcha", "false");
+      formData.append("_template", "table");
+      formData.append(
+        "_autoresponse",
+        `Hello ${ticket.tenantName},
 
 Thank you for contacting Ancas Holdings.
 
@@ -297,103 +265,116 @@ Your maintenance ticket #${ticket.ticketId} has been received. Someone from our 
 
 Thank you for your patience,
 Ancas Holdings Property Management`
-        );
+      );
 
-        addField("Ticket ID", ticket.ticketId);
-        addField("Submitted Date", ticket.submittedAt);
-        addField("Tenant Full Name", ticket.tenantName);
-        addField("Tenant Email", ticket.tenantEmail);
-        addField("Tenant Phone", ticket.tenantPhone);
-        addField("Property Address", ticket.propertyAddress);
-        addField("Apartment / Unit Number", ticket.unitNumber);
-        addField("Maintenance Category", ticket.maintenanceType);
-        addField("Urgency Rating", ticket.urgencyLevel.toUpperCase());
-        addField("Location in Unit", ticket.locationInUnit);
-        addField("Permission to Enter", ticket.permissionToEnter);
-        addField("Preferred Service Window", ticket.preferredTime);
-        addField("Issue Description", ticket.description);
-        
-        if (photoList.length > 0) {
-          addField("Attached Photos Count", `${photoList.length} photo(s) attached below`);
-          addField("Photo Files", photoList.map(p => `${p.name} (${p.size})`).join(", "));
-        } else {
-          addField("Attached Photos Count", "None");
-        }
+      formData.append("Ticket ID", ticket.ticketId);
+      formData.append("Submitted Date", ticket.submittedAt);
+      formData.append("Tenant Full Name", ticket.tenantName);
+      formData.append("Tenant Email", ticket.tenantEmail);
+      formData.append("Tenant Phone", ticket.tenantPhone);
+      formData.append("Property Address", ticket.propertyAddress);
+      formData.append("Apartment / Unit Number", ticket.unitNumber);
+      formData.append("Maintenance Category", ticket.maintenanceType);
+      formData.append("Urgency Rating", ticket.urgencyLevel.toUpperCase());
+      formData.append("Location in Unit", ticket.locationInUnit);
+      formData.append("Permission to Enter", ticket.permissionToEnter);
+      formData.append("Preferred Service Window", ticket.preferredTime);
+      formData.append("Issue Description", ticket.description);
 
-        // FormSubmit.co strictly looks for inputs with name="attachment"
-        // Attach files via DataTransfer into file input(s)
-        if (photoList.length > 0) {
-          try {
-            const dt = new DataTransfer();
-            photoList.forEach(p => {
-              if (p.file) {
-                dt.items.add(p.file);
-              }
-            });
-            if (dt.files.length > 0) {
-              const fileInput = document.createElement("input");
-              fileInput.type = "file";
-              fileInput.name = "attachment";
-              fileInput.multiple = true;
-              fileInput.files = dt.files;
-              form.appendChild(fileInput);
-            }
-          } catch {
-            // Fallback for individual inputs named "attachment"
-            photoList.forEach(p => {
-              if (p.file) {
-                try {
-                  const singleDt = new DataTransfer();
-                  singleDt.items.add(p.file);
-                  const fileInput = document.createElement("input");
-                  fileInput.type = "file";
-                  fileInput.name = "attachment";
-                  fileInput.files = singleDt.files;
-                  form.appendChild(fileInput);
-                } catch {
-                  // Fallback
-                }
-              }
-            });
+      if (photoList.length > 0) {
+        formData.append("Attached Photos Count", `${photoList.length} photo(s) attached`);
+        photoList.forEach((p, idx) => {
+          if (p.file) {
+            formData.append("attachment", p.file, p.name || `photo_${idx + 1}.jpg`);
           }
-        }
-
-        document.body.appendChild(form);
-
-        let resolved = false;
-        const handleCompletion = () => {
-          if (!resolved) {
-            resolved = true;
-            try {
-              form.remove();
-            } catch {
-              // Ignore
-            }
-            resolve({
-              status: "success",
-              message: photoList.length > 0
-                ? `Maintenance request and ${photoList.length} photo attachment(s) transmitted to property management.`
-                : "Maintenance request successfully transmitted to property management."
-            });
-          }
-        };
-
-        // Complete when the iframe finishes loading the FormSubmit response
-        iframe.onload = handleCompletion;
-
-        // Form submission trigger
-        form.submit();
-
-        // Safety fallback timer to guarantee seamless UI flow even if cross-origin onload delays
-        setTimeout(handleCompletion, 2600);
-      } catch (err) {
-        console.error("Submission dispatch error:", err);
-        resolve({
-          status: "success",
-          message: "Request logged. Property operations team is reviewing your ticket."
         });
+      } else {
+        formData.append("Attached Photos Count", "None");
       }
-    });
+
+      // Submit via FormSubmit AJAX endpoint
+      const response = await fetch("https://formsubmit.co/ajax/tudor@ancasholdings.com", {
+        method: "POST",
+        headers: {
+          Accept: "application/json"
+          // Note: Browser automatically sets Content-Type to multipart/form-data with proper boundary
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        let errMessage = `Gateway status ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData?.message) errMessage = errData.message;
+        } catch {
+          // ignore
+        }
+
+        const isActivation = errMessage.toLowerCase().includes("activate") || errMessage.toLowerCase().includes("confirm");
+        return {
+          status: isActivation ? "activation_needed" : "error",
+          message: isActivation
+            ? "One-time email activation required: FormSubmit has sent a confirmation email to property management (tudor@ancasholdings.com). Please click 'Activate Form' in that email to enable automated routing."
+            : `Email delivery status: ${errMessage}. Direct one-click email options are available below.`
+        };
+      }
+
+      const data = await response.json();
+
+      if (data.success === "true" || data.success === true) {
+        return {
+          status: "success",
+          message: photoList.length > 0
+            ? `Maintenance request and ${photoList.length} photo attachment(s) dispatched to property management. Confirmation receipt sent to ${ticket.tenantEmail}.`
+            : `Maintenance request dispatched to property management. Confirmation receipt sent to ${ticket.tenantEmail}.`
+        };
+      } else {
+        const msg = data.message || "Email dispatch could not be confirmed.";
+        const isActivation = msg.toLowerCase().includes("activate") || msg.toLowerCase().includes("confirm");
+        return {
+          status: isActivation ? "activation_needed" : "error",
+          message: isActivation
+            ? "One-time email activation required: FormSubmit has sent an activation link to property management (tudor@ancasholdings.com). Click 'Activate Form' in your inbox to enable automated routing."
+            : `Gateway notice: ${msg}`
+        };
+      }
+    } catch (err: any) {
+      console.warn("AJAX dispatch error, fallback available:", err);
+      return {
+        status: "error",
+        message: "Automated transmission could not be completed directly (e.g. ad-blocker or connection restriction). Use the 1-click email buttons below to ensure immediate delivery."
+      };
+    }
+  };
+
+  // Helper for Tudor to trigger FormSubmit activation in a new tab if unactivated
+  const triggerFormSubmitActivation = () => {
+    const form = document.createElement("form");
+    form.action = "https://formsubmit.co/tudor@ancasholdings.com";
+    form.method = "POST";
+    form.target = "_blank";
+
+    const addField = (name: string, val: string) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = val;
+      form.appendChild(input);
+    };
+
+    addField("_subject", "Ancas Holdings Maintenance Portal - Email Activation");
+    addField("email", "tudor@ancasholdings.com");
+    addField("message", "This submission is to activate FormSubmit for tudor@ancasholdings.com.");
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => {
+      try {
+        form.remove();
+      } catch {
+        // ignore
+      }
+    }, 1500);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -535,6 +516,12 @@ Ancas Holdings Property Management`
     const subject = encodeURIComponent(getSubmitterNotificationSubject(ticket));
     const body = encodeURIComponent(getSubmitterNotificationBody(ticket));
     return `mailto:${ticket.tenantEmail}?subject=${subject}&body=${body}`;
+  };
+
+  const getSelfGmailComposeUrl = (ticket: SubmittedTicket) => {
+    const subject = encodeURIComponent(getSubmitterNotificationSubject(ticket));
+    const body = encodeURIComponent(getSubmitterNotificationBody(ticket));
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(ticket.tenantEmail)}&su=${subject}&body=${body}`;
   };
 
   const openSelfEmailClient = (ticket: SubmittedTicket) => {
@@ -719,15 +706,25 @@ Ancas Holdings Property Management`
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 self-start md:self-auto">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0 self-start md:self-auto">
                     <button
                       onClick={() => openSelfEmailClient(submittedTicket)}
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-sm transition-colors cursor-pointer shadow-2xs"
-                      title="Open in your mail client to save a copy directly to your inbox"
+                      title="Open in your default mail client to save a copy directly to your inbox"
                     >
                       <Mail className="w-3.5 h-3.5" />
-                      <span>Send / Save Copy to My Email</span>
+                      <span>Send Copy to My Email</span>
                     </button>
+                    <a
+                      href={getSelfGmailComposeUrl(submittedTicket)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-sm border border-emerald-300 transition-colors shadow-2xs"
+                      title="Open in Gmail Web to send a copy to yourself"
+                    >
+                      <span>Open in Gmail</span>
+                      <ExternalLink className="w-3 h-3 text-emerald-600" />
+                    </a>
                   </div>
                 </div>
 
@@ -805,16 +802,52 @@ Ancas Holdings Property Management`
                   </div>
                 </div>
 
-                <div className="pt-3 text-xs text-slate-600 space-y-2">
-                  <p className="leading-relaxed">
+                <div className="pt-3 text-xs text-slate-600 space-y-3">
+                  <p className="leading-relaxed font-medium">
                     {dispatchStatus?.message || "Maintenance request details and photos have been dispatched to property management."}
                   </p>
-                  
+
+                  {/* One-Time Activation Alert for Property Manager */}
+                  {dispatchStatus?.status === "activation_needed" && (
+                    <div className="p-4 bg-amber-50 border border-amber-300 rounded-sm text-amber-900 space-y-2.5 shadow-2xs">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-xs uppercase tracking-wide text-amber-950">
+                            Action Needed: One-Time Form Activation
+                          </p>
+                          <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
+                            FormSubmit sent a one-time activation confirmation link to property management at <span className="font-semibold underline">tudor@ancasholdings.com</span>. Please check your inbox (or Spam/Junk folder) and click <strong>"Activate Form"</strong> to enable automated email routing for all future requests.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="pt-1 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={triggerFormSubmitActivation}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded-sm shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Request / Resend Activation Link (New Window)</span>
+                        </button>
+                        <a
+                          href="https://mail.google.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-900 text-xs font-semibold rounded-sm border border-amber-300 transition-colors"
+                        >
+                          <span>Open Gmail to Check Inbox</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Status notice */}
                   <div className="p-3 bg-slate-100/90 border border-slate-200 rounded-sm text-slate-700 flex items-start gap-2.5">
                     <Info className="w-4 h-4 text-[#00264d] shrink-0 mt-0.5" />
                     <div className="leading-relaxed">
-                      <span className="font-semibold text-slate-900">Work Order Logged:</span> Your service request has been queued for our property management team. If you require immediate confirmation or wish to send a direct message, you may also use the one-click email options below.
+                      <span className="font-semibold text-slate-900">Work Order Logged:</span> Your request <span className="font-mono font-bold">#{submittedTicket.ticketId}</span> is recorded. You can also transmit the ticket or dispatch a direct message immediately using the one-click email options below.
                     </div>
                   </div>
 
