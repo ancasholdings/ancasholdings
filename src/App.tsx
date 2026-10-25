@@ -102,6 +102,7 @@ const Navbar = ({ activeView, onNavigateHome, onNavigateAvailability, onNavigate
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentHash, setCurrentHash] = useState(() => (typeof window !== "undefined" ? window.location.hash : "#home"));
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -170,31 +171,56 @@ const Navbar = ({ activeView, onNavigateHome, onNavigateAvailability, onNavigate
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
         <Logo onClick={() => onNavigateHome("#home")} />
 
-        {/* Desktop Nav - Unified Button Styling & Identical Rollover Effects */}
-        <div className="hidden md:flex items-center gap-2 lg:gap-3">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={item.onClick}
-              className={`group relative px-3.5 lg:px-4 py-2 text-xs font-semibold tracking-wider uppercase rounded-sm transition-all duration-200 cursor-pointer border select-none active:scale-95 ${
-                item.isActive
-                  ? "bg-[#00264d] text-white border-[#00264d] shadow-xs"
-                  : "bg-white/80 hover:bg-white text-slate-700 hover:text-[#00264d] border-stone-200/90 hover:border-[#d4a017] hover:shadow-sm"
-              }`}
-            >
-              <span className="relative z-10 flex items-center justify-center">
-                {item.label}
-              </span>
-              {/* Gold underline accent on rollover and active */}
-              <span
-                className={`absolute bottom-0 left-2 right-2 h-0.5 rounded-full transition-all duration-200 ${
-                  item.isActive
-                    ? "bg-[#d4a017] opacity-100"
-                    : "bg-[#d4a017] opacity-0 scale-x-75 group-hover:opacity-100 group-hover:scale-x-100"
+        {/* Desktop Nav - Executive Segmented Button Dock with Animated Gliding Highlight */}
+        <div 
+          onMouseLeave={() => setHoveredId(null)}
+          className="hidden md:flex items-center bg-stone-100/90 border border-stone-200/90 p-1 rounded-sm shadow-2xs backdrop-blur-sm"
+        >
+          {navItems.map((item) => {
+            const isHovered = hoveredId === item.id;
+            const isActive = item.isActive;
+
+            return (
+              <button
+                key={item.id}
+                onMouseEnter={() => setHoveredId(item.id)}
+                onClick={item.onClick}
+                className={`relative px-3.5 lg:px-4 py-2 text-xs font-semibold tracking-wider uppercase rounded-xs transition-colors duration-200 cursor-pointer select-none active:scale-95 flex items-center justify-center ${
+                  isActive 
+                    ? "text-white" 
+                    : isHovered 
+                      ? "text-[#00264d]" 
+                      : "text-slate-600"
                 }`}
-              />
-            </button>
-          ))}
+              >
+                {/* Active background tile */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeNavBackground"
+                    className="absolute inset-0 bg-[#00264d] rounded-xs shadow-xs"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+
+                {/* Smooth gliding hover background tile (when not active) */}
+                {!isActive && isHovered && (
+                  <motion.div
+                    layoutId="hoverNavBackground"
+                    className="absolute inset-0 bg-white rounded-xs shadow-xs border border-stone-200/60"
+                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                  />
+                )}
+
+                {/* Button label */}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  {item.label}
+                  {isActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#d4a017]" />
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Mobile Toggle */}
@@ -216,7 +242,7 @@ const Navbar = ({ activeView, onNavigateHome, onNavigateAvailability, onNavigate
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-full left-0 w-full bg-white shadow-xl py-5 px-6 flex flex-col gap-2.5 md:hidden border-t border-stone-100"
+          className="absolute top-full left-0 w-full bg-white shadow-xl py-5 px-6 flex flex-col gap-2 md:hidden border-t border-stone-100"
         >
           {navItems.map((item) => (
             <button
@@ -225,18 +251,16 @@ const Navbar = ({ activeView, onNavigateHome, onNavigateAvailability, onNavigate
                 setIsMobileMenuOpen(false);
                 item.onClick();
               }}
-              className={`group relative w-full text-left px-4 py-3 text-xs font-semibold tracking-wider uppercase rounded-sm transition-all duration-200 cursor-pointer border flex items-center justify-between active:scale-[0.98] ${
+              className={`w-full text-left px-4 py-3 text-xs font-semibold tracking-wider uppercase rounded-sm transition-all duration-200 cursor-pointer border flex items-center justify-between active:scale-[0.98] ${
                 item.isActive
-                  ? "bg-[#00264d] text-white border-[#00264d] shadow-xs"
-                  : "bg-stone-50 hover:bg-white text-slate-700 hover:text-[#00264d] border-stone-200 hover:border-[#d4a017]"
+                  ? "bg-[#00264d] text-white border-[#00264d] border-l-4 border-l-[#d4a017] shadow-xs"
+                  : "bg-stone-50 hover:bg-white text-slate-700 hover:text-[#00264d] border-stone-200"
               }`}
             >
               <span>{item.label}</span>
-              <span
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                  item.isActive ? "bg-[#d4a017]" : "bg-transparent group-hover:bg-[#d4a017]"
-                }`}
-              />
+              {item.isActive && (
+                <span className="w-2 h-2 rounded-full bg-[#d4a017]" />
+              )}
             </button>
           ))}
         </motion.div>
