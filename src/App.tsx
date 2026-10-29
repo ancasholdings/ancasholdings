@@ -427,22 +427,17 @@ const Contact = () => {
     if (!fullName.trim() || !email.trim() || !propertyAddress.trim()) return;
     setIsSubmitting(true);
     try {
-      await fetch("https://formsubmit.co/ajax/tudor@ancasholdings.com", {
+      await fetch("/api/leads", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          _subject: `[Property Lead Acquisition] ${propertyAddress} (${propertyType})`,
-          _replyto: email,
-          _captcha: "false",
-          _template: "table",
-          "Contact Name": fullName,
-          "Contact Email": email,
-          "Property Address": propertyAddress,
-          "Property Type": propertyType,
-          "Lead Details": details
+          fullName,
+          email,
+          propertyAddress,
+          propertyType,
+          details
         })
       });
     } catch (err) {

@@ -1,0 +1,19 @@
+[
+  {
+    "ticketId": "ANC-2026-TEST1",
+    "submittedAt": "Oct 29, 2026, 9:25 AM",
+    "tenantName": "Alex Morgan",
+    "tenantEmail": "alex.test.tenant@example.com",
+    "tenantPhone": "(773) 555-0199",
+    "propertyAddress": "123 N Chicago Ave, Chicago, IL",
+    "unitNumber": "Unit 2B",
+    "maintenanceType": "Plumbing (Leak, Drip, Drain Clog)",
+    "urgencyLevel": "standard",
+    "locationInUnit": "Kitchen under sink",
+    "description": "Small continuous drip under kitchen sink when cold faucet runs.",
+    "permissionToEnter": "Yes - Permission granted to enter",
+    "preferredTime": "Anytime during normal hours",
+    "photoUrls": [],
+    "serverReceivedAt": "2026-10-29T16:25:57.905Z"
+  }
+]
