@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for reformatting the inbox maintenance dispatch email into a sleek, contractor-ready Work Order. Features professional field grouping, immediate job-site scannability, clear access protocols, resident contact coordinates, and an executive text work-order block optimized for seamless forwarding to contractors.",
-  "updatedAt":  "2026-10-23T18:52:09.790468212Z",
+  "summary":  "Architectural blueprint and implementation plan for transforming the Tenants page into a dual-sided Tenant & Property Management Portal. Includes tenant lease management, rent ledger, maintenance dispatch tracking, and landlord portfolio administration.",
+  "updatedAt":  "2026-10-25T19:54:00.705047561Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

@@ -18,7 +18,8 @@ import {
   Info,
   Calendar,
   Lock,
-  MapPin
+  MapPin,
+  RotateCcw
 } from "lucide-react";
 
 interface PhotoItem {
@@ -69,7 +70,6 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
   const [tenantEmail, setTenantEmail] = useState("");
   const [tenantPhone, setTenantPhone] = useState("");
   const [propertyAddress, setPropertyAddress] = useState("");
-
   const [unitNumber, setUnitNumber] = useState("");
   const [maintenanceType, setMaintenanceType] = useState("");
   const [urgencyLevel, setUrgencyLevel] = useState<"routine" | "standard" | "urgent">("standard");
@@ -88,7 +88,6 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
     message: string;
   } | null>(null);
 
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const formatFileSize = (bytes: number): string => {
@@ -97,9 +96,8 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Client-side image optimization to ensure crystal-clear attachments while staying well within FormSubmit's 10MB limit
+  // Client-side image optimization to ensure rapid upload and prevent email gateway size rejection
   const optimizeImageFile = async (file: File): Promise<File> => {
-    // If not an image or already under 1MB, keep original file
     if (!file.type.startsWith("image/") || file.size <= 1024 * 1024) {
       return file;
     }
@@ -142,7 +140,7 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
               const cleanBase = file.name.replace(/\.[^/.]+$/, "");
               const optimized = new File([blob], `${cleanBase}.jpg`, {
                 type: "image/jpeg",
-                lastModified: Date.now(),
+                lastModified: Date.now()
               });
               resolve(optimized);
             },
@@ -165,8 +163,8 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
 
   const processFiles = async (files: FileList | File[]) => {
     setErrorMsg(null);
-    const validFiles = Array.from(files).filter(file => file.type.startsWith("image/"));
-    
+    const validFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+
     if (validFiles.length === 0) {
       setErrorMsg("Please upload valid image files (JPG, PNG, WEBP, HEIC).");
       return;
@@ -183,13 +181,12 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
         continue;
       }
 
-      // Optimize large photos to ensure rapid upload and prevent email gateway size rejection
       const file = await optimizeImageFile(rawFile);
 
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target?.result as string;
-        setPhotos(prev => [
+        setPhotos((prev) => [
           ...prev,
           {
             id: Math.random().toString(36).substring(2, 9),
@@ -232,15 +229,19 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
   };
 
   const removePhoto = (id: string) => {
-    setPhotos(prev => prev.filter(p => p.id !== id));
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
   };
 
   // Direct multipart form submission using native form submission targeted to a hidden iframe
-  // This guarantees FormSubmit processes binary files and attaches photos to the dispatch email
   const sendEmailDispatch = async (ticket: SubmittedTicket, photoList: PhotoItem[]) => {
     try {
       const categoryShort = ticket.maintenanceType.split("(")[0].trim();
-      const priorityTag = ticket.urgencyLevel === "emergency" ? " [EMERGENCY]" : ticket.urgencyLevel === "urgent" ? " [URGENT]" : "";
+      const priorityTag =
+        ticket.urgencyLevel === "emergency"
+          ? " [EMERGENCY]"
+          : ticket.urgencyLevel === "urgent"
+          ? " [URGENT]"
+          : "";
       const subjectLine = `[WORK ORDER #${ticket.ticketId}]${priorityTag} ${categoryShort} - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`;
 
       const executiveContractorSummary = [
@@ -270,7 +271,7 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
         "",
         "--- ATTACHED MEDIA (MANDATORY) ---",
         photoList.length > 0
-          ? `${photoList.length} photo(s) attached directly to this dispatch email (${photoList.map(p => `${p.name} [${p.size}]`).join(", ")})`
+          ? `${photoList.length} photo(s) attached directly to this dispatch email (${photoList.map((p) => `${p.name} [${p.size}]`).join(", ")})`
           : "Photo upload required",
         "============================================================"
       ].join("\n");
@@ -279,17 +280,18 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
         _subject: subjectLine,
         email: ticket.tenantEmail,
         _replyto: ticket.tenantEmail,
-        _cc: ticket.tenantEmail,
         _captcha: "false",
         _template: "box",
-        _autoresponse: `Hello ${ticket.tenantName},
+        _autoresponse: `Your work order was received by the Ancas Holdings team. A team member will be in touch shortly.
 
-Thank you for contacting Ancas Holdings.
+--------------------------------------------------
+Ticket ID: #${ticket.ticketId}
+Property: Unit ${ticket.unitNumber}, ${ticket.propertyAddress}
+Issue Category: ${ticket.maintenanceType}
+Submitted: ${ticket.submittedAt}
 
-Your maintenance ticket #${ticket.ticketId} has been received. Someone from our property management team will review your request and be in touch within 24-48 hours.
-
-Thank you for your patience,
-Ancas Holdings Property Management`,
+Ancas Holdings Property Management
+Direct Contact: (773) 516-3148`,
         "CONTRACTOR WORK ORDER SUMMARY": executiveContractorSummary,
         "[WORK ORDER] Ticket Number": ticket.ticketId,
         "[WORK ORDER] Priority Rating": ticket.urgencyLevel.toUpperCase(),
@@ -304,7 +306,7 @@ Ancas Holdings Property Management`,
         "[ACCESS & RESIDENT] Preferred Service Window": ticket.preferredTime,
         "[SCOPE OF WORK] Trade Category": ticket.maintenanceType,
         "[SCOPE OF WORK] Issue Description": ticket.description,
-        "[ATTACHMENTS] Attached Photos": `${photoList.length} photo(s) attached (${photoList.map(p => p.name).join(", ")})`
+        "[ATTACHMENTS] Attached Photos": `${photoList.length} photo(s) attached (${photoList.map((p) => p.name).join(", ")})`
       };
 
       // Ensure hidden target iframe exists in DOM
@@ -320,7 +322,7 @@ Ancas Holdings Property Management`,
         document.body.appendChild(iframe);
       }
 
-      // Create native HTML form for standard multipart POST
+      // Create native HTML form for standard multipart POST - Strictly dispatched to tudor@ancasholdings.com
       const form = document.createElement("form");
       form.method = "POST";
       form.action = "https://formsubmit.co/tudor@ancasholdings.com";
@@ -328,7 +330,6 @@ Ancas Holdings Property Management`,
       form.target = "formsubmit_dispatch_frame";
       form.style.display = "none";
 
-      // Append all text fields
       Object.entries(fields).forEach(([key, val]) => {
         const input = document.createElement("input");
         input.type = "hidden";
@@ -337,7 +338,6 @@ Ancas Holdings Property Management`,
         form.appendChild(input);
       });
 
-      // Append binary file inputs (FormSubmit attaches fields named "attachment", "attachment_2", etc.)
       photoList.forEach((p, idx) => {
         if (p.file) {
           try {
@@ -357,7 +357,6 @@ Ancas Holdings Property Management`,
       document.body.appendChild(form);
       form.submit();
 
-      // Clean up dynamic form after transmission
       setTimeout(() => {
         try {
           if (form.parentNode) form.parentNode.removeChild(form);
@@ -366,7 +365,7 @@ Ancas Holdings Property Management`,
 
       return {
         status: "success",
-        message: `Maintenance request and ${photoList.length} photo(s) dispatched to property management and ${ticket.tenantEmail}.`
+        message: `Work order dispatched exclusively to tudor@ancasholdings.com. Immediate confirmation email sent to ${ticket.tenantEmail}.`
       };
     } catch (err: any) {
       console.warn("Transmission error:", err);
@@ -381,7 +380,6 @@ Ancas Holdings Property Management`,
     e.preventDefault();
     setErrorMsg(null);
 
-    // Validation
     const effectiveAddress = propertyAddress.trim();
 
     if (!tenantName.trim()) {
@@ -413,7 +411,6 @@ Ancas Holdings Property Management`,
       return;
     }
 
-    // Mandatory photo requirement
     if (photos.length === 0) {
       setErrorMsg("A photo of the maintenance issue is mandatory. Please attach at least one photo before submitting.");
       const photoHub = document.getElementById("photo-upload-section");
@@ -445,18 +442,22 @@ Ancas Holdings Property Management`,
       urgencyLevel,
       locationInUnit: locationInUnit.trim() || "Unit interior",
       description: description.trim(),
-      permissionToEnter: permissionToEnter === "yes" ? "Yes - Permission granted to enter" : "No - Call tenant first",
-      preferredTime: preferredTime === "anytime" ? "Anytime during normal hours" : preferredTime === "morning" ? "Morning (8 AM - 12 PM)" : "Afternoon (12 PM - 5 PM)",
+      permissionToEnter:
+        permissionToEnter === "yes" ? "Yes - Permission granted to enter" : "No - Call tenant first",
+      preferredTime:
+        preferredTime === "anytime"
+          ? "Anytime during normal hours"
+          : preferredTime === "morning"
+          ? "Morning (8 AM - 12 PM)"
+          : "Afternoon (12 PM - 5 PM)",
       photos
     };
 
-    // Real API dispatch to tudor@ancasholdings.com
     const result = await sendEmailDispatch(ticket, photos);
     setDispatchStatus(result);
     setSubmittedTicket(ticket);
     setIsSubmitting(false);
 
-    // Scroll smoothly to top of page to view the confirmation receipt
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -483,27 +484,10 @@ Ancas Holdings Property Management`,
       `${ticket.description}\n\n` +
       `ATTACHMENTS:\n` +
       `- Attached Photos: ${ticket.photos.length} photo(s)\n` +
-      (ticket.photos.length > 0 ? `- Files: ${ticket.photos.map(p => `${p.name} (${p.size})`).join(", ")}\n` : "") +
+      (ticket.photos.length > 0 ? `- Files: ${ticket.photos.map((p) => `${p.name} (${p.size})`).join(", ")}\n` : "") +
       `---------------------------------------------------\n` +
       `Dispatched to: Ancas Holdings Property Management`
     );
-  };
-
-  const getSelfEmailComposeUrl = (ticket: SubmittedTicket) => {
-    const subject = encodeURIComponent(`[Ticket #${ticket.ticketId}] Maintenance Request Summary - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`);
-    const body = encodeURIComponent(
-      `Hello ${ticket.tenantName},\n\n` +
-      `Here is a copy of your submitted maintenance request for your records:\n\n` +
-      getTicketSummaryText(ticket) +
-      `\n\nSomeone from our property management team will review your request and be in touch within 24-48 hours.\n\n` +
-      `Thank you for contacting Ancas Holdings.\n` +
-      `Ancas Holdings Property Management`
-    );
-    return `mailto:${ticket.tenantEmail}?subject=${subject}&body=${body}`;
-  };
-
-  const openSelfEmailClient = (ticket: SubmittedTicket) => {
-    window.location.href = getSelfEmailComposeUrl(ticket);
   };
 
   const handlePrint = () => {
@@ -550,7 +534,7 @@ Ancas Holdings Property Management`,
         <div className="mb-10 text-center md:text-left">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#00264d]/5 border border-[#00264d]/10 text-[#00264d] text-xs font-semibold uppercase tracking-widest rounded-full mb-3">
             <Wrench className="w-3.5 h-3.5 text-[#d4a017]" />
-            Tenant Maintenance Portal
+            Tenant Maintenance Request Form
           </div>
           <h1 className="text-3xl md:text-5xl font-serif text-[#00264d] mb-4">
             Resident Service & <span className="italic font-light">Maintenance</span>
@@ -654,8 +638,8 @@ Ancas Holdings Property Management`,
               exit={{ opacity: 0, y: -20 }}
               className="mb-12 bg-white border border-stone-200 rounded-sm shadow-xl p-8 md:p-10"
             >
-              {/* Header with Title and ONLY the two requested buttons: Email to myself and Print */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-200 pb-6 mb-8 gap-4">
+              {/* Header with Title and Print / Reset buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-200 pb-6 mb-6 gap-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200">
                     <CheckCircle2 className="w-6 h-6" />
@@ -673,21 +657,34 @@ Ancas Holdings Property Management`,
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => openSelfEmailClient(submittedTicket)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00264d] hover:bg-[#00264d]/90 text-white text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors cursor-pointer shadow-xs"
-                  >
-                    <Mail className="w-4 h-4 text-[#d4a017]" />
-                    <span>Email to myself</span>
-                  </button>
+                <div className="flex flex-wrap items-center gap-3">
                   <button
                     onClick={handlePrint}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-slate-700 text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors cursor-pointer border border-stone-200"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00264d] hover:bg-[#00264d]/90 text-white text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors cursor-pointer shadow-xs"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span>Print</span>
+                    <Printer className="w-4 h-4 text-[#d4a017]" />
+                    <span>Print Receipt</span>
                   </button>
+                  <button
+                    onClick={resetForm}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-stone-50 hover:bg-stone-100 text-[#00264d] text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors cursor-pointer border border-stone-300"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Submit Another Request</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Immediate Confirmation Notification Callout */}
+              <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-sm mb-6 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-emerald-950">
+                    &ldquo;Your work order was received by the Ancas Holdings team. A team member will be in touch shortly.&rdquo;
+                  </p>
+                  <p className="text-xs text-emerald-700">
+                    This notification has been sent directly to <span className="font-semibold text-emerald-900">{submittedTicket.tenantEmail}</span>. The complete maintenance work order and photos were dispatched exclusively to management (<span className="font-semibold text-emerald-900">tudor@ancasholdings.com</span>).
+                  </p>
                 </div>
               </div>
 
@@ -1236,13 +1233,13 @@ Ancas Holdings Property Management`,
                   <div className="flex items-start gap-2.5 text-xs text-slate-500">
                     <Mail className="w-4 h-4 text-[#d4a017] shrink-0 mt-0.5" />
                     <span>
-                      When submitted, all details and images will be transmitted to our operations team and promptly reviewed by an appropriate technician.
+                      When submitted, the complete work order and attached photographs are dispatched directly to management at <strong className="text-slate-700">tudor@ancasholdings.com</strong>.
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-3 py-2 rounded-sm">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>
-                      An automated confirmation notification with your Ticket Number will be sent to your email (our team will be in touch within 24–48 hours).
+                      An immediate email notification will be delivered to your inbox: &ldquo;Your work order was received by the Ancas Holdings team. A team member will be in touch shortly.&rdquo;
                     </span>
                   </div>
                 </div>
