@@ -15,6 +15,7 @@ import {
 import { useState, useEffect, FormEvent } from "react";
 import { TenantsPortal } from "./components/TenantsPortal";
 import { AvailabilityPortal } from "./components/AvailabilityPortal";
+import { WorkOrdersModal } from "./components/WorkOrdersModal";
 
 // --- Components ---
 
@@ -601,9 +602,10 @@ interface FooterProps {
   onNavigateHome: (hashTarget?: string) => void;
   onNavigateAvailability: () => void;
   onNavigateTenants: () => void;
+  onOpenWorkOrders: () => void;
 }
 
-const Footer = ({ onNavigateHome, onNavigateAvailability, onNavigateTenants }: FooterProps) => {
+const Footer = ({ onNavigateHome, onNavigateAvailability, onNavigateTenants, onOpenWorkOrders }: FooterProps) => {
   return (
     <footer className="bg-stone-50 text-primary py-16 border-t border-stone-200/50">
       <div className="max-w-7xl mx-auto px-6">
@@ -662,17 +664,33 @@ const Footer = ({ onNavigateHome, onNavigateAvailability, onNavigateTenants }: F
             </ul>
           </div>
           <div>
-            <h4 className="text-sm uppercase tracking-widest mb-6 font-medium">Legal</h4>
-            <ul className="space-y-4 text-primary/40 text-sm">
-              <li><a href="#" className="hover:text-accent transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors">Fair Housing Notice</a></li>
+            <h4 className="text-sm uppercase tracking-widest mb-6 font-medium">Operations & Admin</h4>
+            <ul className="space-y-4 text-primary/70 text-sm">
+              <li>
+                <button
+                  type="button"
+                  onClick={onOpenWorkOrders}
+                  className="text-xs uppercase font-bold tracking-wider text-[#00264d] hover:text-[#d4a017] transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <span>Work Order Log</span>
+                  <span className="px-1.5 py-0.5 bg-[#d4a017]/20 text-[#00264d] text-[10px] font-bold rounded">Live Audit</span>
+                </button>
+              </li>
+              <li><a href="#" className="hover:text-accent transition-colors text-primary/40 text-xs">Privacy Policy</a></li>
+              <li><a href="#" className="hover:text-accent transition-colors text-primary/40 text-xs">Terms of Service</a></li>
+              <li><a href="#" className="hover:text-accent transition-colors text-primary/40 text-xs">Fair Housing Notice</a></li>
             </ul>
           </div>
         </div>
         <div className="pt-8 border-t border-slate-200/60 flex flex-col md:flex-row justify-between items-center gap-4 text-primary/40 text-xs uppercase tracking-widest">
           <p>© 2026 Ancas Holdings. All Rights Reserved.</p>
-          <div className="flex gap-6">
+          <div className="flex items-center gap-6">
+            <button
+              onClick={onOpenWorkOrders}
+              className="hover:text-primary transition-colors text-[11px] underline underline-offset-4 cursor-pointer"
+            >
+              Management Dispatch Log
+            </button>
             <a href="https://www.linkedin.com/in/ancast/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">LinkedIn</a>
           </div>
         </div>
@@ -682,6 +700,7 @@ const Footer = ({ onNavigateHome, onNavigateAvailability, onNavigateTenants }: F
 };
 
 export default function App() {
+  const [isWorkOrdersOpen, setIsWorkOrdersOpen] = useState(false);
   const [activeView, setActiveView] = useState<"home" | "availability" | "tenants">(() => {
     if (typeof window !== "undefined") {
       if (window.location.hash === "#tenants") return "tenants";
@@ -762,6 +781,11 @@ export default function App() {
         onNavigateHome={navigateToHome}
         onNavigateAvailability={navigateToAvailability}
         onNavigateTenants={navigateToTenants}
+        onOpenWorkOrders={() => setIsWorkOrdersOpen(true)}
+      />
+      <WorkOrdersModal 
+        isOpen={isWorkOrdersOpen} 
+        onClose={() => setIsWorkOrdersOpen(false)} 
       />
     </div>
   );

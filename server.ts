@@ -3,6 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
+import dotenv from 'dotenv';
+import nodemailer from 'nodemailer';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +38,19 @@ async function startServer() {
     res.status(200).send('OK');
   });
 
+  // System diagnostic endpoint
+  app.get('/api/system-status', (_req, res) => {
+    const hasSmtp = Boolean(process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS);
+    const existing: any[] = JSON.parse(fs.readFileSync(ticketsFile, 'utf-8'));
+    res.json({
+      status: 'operational',
+      hasSmtpConfigured: hasSmtp,
+      smtpUser: process.env.SMTP_USER || 'tudor@ancasholdings.com',
+      totalWorkOrders: existing.length,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // API to upload photos
   app.post('/api/upload', (req, res) => {
     try {
@@ -58,7 +75,7 @@ async function startServer() {
     }
   });
 
-  // Helper function to dispatch emails via ShipMyForm relay
+  // Fallback public relay function via ShipMyForm
   async function sendShipMyForm(toEmail: string, subject: string, message: string, fromName: string, replyTo?: string) {
     try {
       const origin = process.env.APP_URL || 'https://ancasholdings.com';
@@ -83,6 +100,63 @@ async function startServer() {
       console.warn(`ShipMyForm dispatch failed to ${toEmail}:`, err.message);
       return { success: false, error: err.message };
     }
+  }
+
+  // Unified multi-channel email sender: SMTP (preferred) + Form Relays (fallback)
+  async function sendEmailMessage({
+    to,
+    subject,
+    text,
+    html,
+    fromName,
+    replyTo
+  }: {
+    to: string;
+    subject: string;
+    text: string;
+    html?: string;
+    fromName?: string;
+    replyTo?: string;
+  }): Promise<{ success: boolean; method: string; detail?: string }> {
+    const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS;
+    const smtpUser = process.env.SMTP_USER || 'tudor@ancasholdings.com';
+    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const smtpPort = Number(process.env.SMTP_PORT) || 465;
+
+    // Method 1: Authenticated SMTP (Direct Gmail / Google Workspace delivery)
+    if (smtpPass) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpPort === 465,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass
+          }
+        });
+        const info = await transporter.sendMail({
+          from: `"${fromName || 'Ancas Holdings'}" <${smtpUser}>`,
+          to,
+          replyTo: replyTo || smtpUser,
+          subject,
+          text,
+          html: html || text.replace(/\n/g, '<br/>')
+        });
+        console.log(`[SMTP DELIVERED] Successfully sent email to ${to} (Message ID: ${info.messageId})`);
+        return { success: true, method: 'smtp', detail: info.messageId };
+      } catch (smtpErr: any) {
+        console.error(`[SMTP ERROR] Could not send email via SMTP to ${to}:`, smtpErr.message);
+      }
+    }
+
+    // Method 2: ShipMyForm relay
+    const relayRes = await sendShipMyForm(to, subject, text, fromName || 'Ancas Holdings', replyTo);
+    return {
+      success: relayRes.success,
+      method: 'shipmyform',
+      detail: relayRes.success ? 'Dispatched via web mail gateway' : relayRes.error
+    };
   }
 
   // API to handle end-to-end work order dispatch
@@ -141,13 +215,13 @@ async function startServer() {
       const managementSubject = `[WORK ORDER #${ticket.ticketId}]${priorityTag} ${categoryShort} - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`;
 
       // 2. Dispatch Work Order Exclusively to tudor@ancasholdings.com (Do NOT CC or send this to the tenant)
-      const tudorDispatch = await sendShipMyForm(
-        'tudor@ancasholdings.com',
-        managementSubject,
-        contractorSummary,
-        `Resident: ${ticket.tenantName}`,
-        ticket.tenantEmail
-      );
+      const tudorDispatch = await sendEmailMessage({
+        to: 'tudor@ancasholdings.com',
+        subject: managementSubject,
+        text: contractorSummary,
+        fromName: `Maintenance Dispatch [${ticket.tenantName}]`,
+        replyTo: ticket.tenantEmail
+      });
 
       // 3. Dispatch Immediate Confirmation Notification Exclusively to Tenant's Inbox
       const tenantNotificationMessage = [
@@ -164,19 +238,22 @@ async function startServer() {
 
       const tenantNotificationSubject = `[Ancas Holdings] Work Order Received #${ticket.ticketId}`;
 
-      const tenantDispatch = await sendShipMyForm(
-        ticket.tenantEmail,
-        tenantNotificationSubject,
-        tenantNotificationMessage,
-        "Ancas Holdings Property Management",
-        "tudor@ancasholdings.com"
-      );
+      const tenantDispatch = await sendEmailMessage({
+        to: ticket.tenantEmail,
+        subject: tenantNotificationSubject,
+        text: tenantNotificationMessage,
+        fromName: "Ancas Holdings Property Management",
+        replyTo: "tudor@ancasholdings.com"
+      });
 
       res.json({
         success: true,
         ticketId: ticket.ticketId,
-        tudorStatus: tudorDispatch.success ? 'sent' : 'fallback_queued',
-        tenantStatus: tenantDispatch.success ? 'sent' : 'fallback_queued',
+        tudorStatus: tudorDispatch.success ? 'sent' : 'queued',
+        tudorMethod: tudorDispatch.method,
+        tenantStatus: tenantDispatch.success ? 'sent' : 'queued',
+        tenantMethod: tenantDispatch.method,
+        hasSmtp: Boolean(process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS),
         message: "Your work order was received by the Ancas Holdings team. A team member will be in touch shortly."
       });
     } catch (err: any) {
@@ -200,13 +277,13 @@ async function startServer() {
         `Submitted At    : ${new Date().toISOString()}`
       ].join('\n');
 
-      await sendShipMyForm(
-        'tudor@ancasholdings.com',
-        `[Property Acquisition Lead] ${lead.propertyAddress} (${lead.propertyType})`,
-        leadSummary,
-        lead.fullName,
-        lead.email
-      );
+      await sendEmailMessage({
+        to: 'tudor@ancasholdings.com',
+        subject: `[Property Acquisition Lead] ${lead.propertyAddress} (${lead.propertyType})`,
+        text: leadSummary,
+        fromName: lead.fullName,
+        replyTo: lead.email
+      });
 
       res.json({ success: true, message: 'Lead received and dispatched' });
     } catch (err: any) {
