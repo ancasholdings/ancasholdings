@@ -138,7 +138,8 @@ async function startServer() {
                 auth: {
                   user: smtpUser,
                   pass: smtpPass
-                }
+                },
+                tls: { rejectUnauthorized: false }
               }
             : {
                 host: smtpHost,
@@ -147,11 +148,13 @@ async function startServer() {
                 auth: {
                   user: smtpUser,
                   pass: smtpPass
-                }
+                },
+                tls: { rejectUnauthorized: false }
               }
         );
+        const cleanFromName = fromName ? fromName.replace(/[\[\]]/g, '').trim() : 'Ancas Holdings';
         const info = await transporter.sendMail({
-          from: `"${fromName || 'Ancas Holdings'}" <${smtpUser}>`,
+          from: `"${cleanFromName}" <${smtpUser}>`,
           to,
           replyTo: replyTo || smtpUser,
           subject,
@@ -182,9 +185,19 @@ async function startServer() {
         return res.status(400).json({ error: 'Missing required ticket data' });
       }
 
-      // 1. Persist to server JSON database
+      // 1. Persist to server JSON database (without large dataUrl blobs)
+      const cleanPhotos = (ticket.photos || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        size: p.size
+      }));
+      const cleanTicket = {
+        ...ticket,
+        photos: cleanPhotos,
+        serverReceivedAt: new Date().toISOString()
+      };
       const existing: any[] = JSON.parse(fs.readFileSync(ticketsFile, 'utf-8'));
-      existing.unshift({ ...ticket, serverReceivedAt: new Date().toISOString() });
+      existing.unshift(cleanTicket);
       fs.writeFileSync(ticketsFile, JSON.stringify(existing.slice(0, 100), null, 2), 'utf-8');
 
       const appBaseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:3000'}`;
@@ -234,13 +247,13 @@ async function startServer() {
         to: 'tudor@ancasholdings.com',
         subject: managementSubject,
         text: contractorSummary,
-        fromName: `Maintenance Dispatch [${ticket.tenantName}]`,
+        fromName: `Maintenance Dispatch ${ticket.tenantName}`,
         replyTo: ticket.tenantEmail
       });
 
       // 3. Dispatch Immediate Confirmation Notification Exclusively to Tenant's Inbox
       const tenantNotificationMessage = [
-        "Your work order was received by the Ancas Holdings team. A team member will be in touch shortly.",
+        "You worker was submitted to the team. Someone will be in touch shortly.",
         "",
         `Work Order Reference: #${ticket.ticketId}`,
         `Property: Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`,
@@ -269,7 +282,7 @@ async function startServer() {
         tenantStatus: tenantDispatch.success ? 'sent' : 'queued',
         tenantMethod: tenantDispatch.method,
         hasSmtp: Boolean(process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS),
-        message: "Your work order was received by the Ancas Holdings team. A team member will be in touch shortly."
+        message: "You worker was submitted to the team. Someone will be in touch shortly."
       });
     } catch (err: any) {
       console.error('Work order dispatch error:', err);

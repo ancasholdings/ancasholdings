@@ -235,7 +235,7 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
   // Safe backend-driven email dispatch and persistence
   const sendEmailDispatch = async (ticket: SubmittedTicket, photoList: PhotoItem[]) => {
     try {
-      // 1. Upload photos to server to get permanent URLs
+      // 1. Upload photos to server to get permanent URLs if photos are provided
       const uploadedPhotoUrls: string[] = [];
       for (const p of photoList) {
         if (p.dataUrl) {
@@ -257,12 +257,20 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
         }
       }
 
+      // Clean photo metadata to prevent sending multi-megabyte base64 blobs in the request body
+      const cleanPhotos = (photoList || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        size: p.size
+      }));
+
       // 2. Dispatch work order via backend API (routes to tudor@ancasholdings.com + sends confirmation to tenant)
       const dispatchRes = await fetch("/api/dispatch-work-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...ticket,
+          photos: cleanPhotos,
           photoUrls: uploadedPhotoUrls
         })
       });
@@ -274,19 +282,19 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
       // 3. Save ticket to local device storage as backup
       try {
         const stored = JSON.parse(localStorage.getItem("ancas_work_orders") || "[]");
-        stored.unshift({ ...ticket, photoUrls: uploadedPhotoUrls });
+        stored.unshift({ ...ticket, photos: cleanPhotos, photoUrls: uploadedPhotoUrls });
         localStorage.setItem("ancas_work_orders", JSON.stringify(stored.slice(0, 50)));
       } catch {}
 
       return {
         status: "success" as const,
-        message: `Your work order was received by the Ancas Holdings team. A team member will be in touch shortly.`
+        message: `You worker was submitted to the team. Someone will be in touch shortly.`
       };
     } catch (err: any) {
       console.warn("Transmission warning:", err);
       return {
         status: "success" as const,
-        message: `Your work order was received by the Ancas Holdings team. A team member will be in touch shortly.`
+        message: `You worker was submitted to the team. Someone will be in touch shortly.`
       };
     }
   };
@@ -321,17 +329,8 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
       setErrorMsg("Please choose the type of maintenance issue from the dropdown.");
       return;
     }
-    if (!description.trim() || description.trim().length < 10) {
-      setErrorMsg("Please provide a brief description of the issue (at least 10 characters).");
-      return;
-    }
-
-    if (photos.length === 0) {
-      setErrorMsg("A photo of the maintenance issue is mandatory. Please attach at least one photo before submitting.");
-      const photoHub = document.getElementById("photo-upload-section");
-      if (photoHub) {
-        photoHub.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+    if (!description.trim() || description.trim().length < 5) {
+      setErrorMsg("Please provide a brief description of the issue.");
       return;
     }
 
