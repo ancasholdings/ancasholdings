@@ -1,5 +1,22 @@
 [
   {
+    "ticketId": "ANC-TEST-8899",
+    "submittedAt": "Oct 29, 2026, 12:00 PM",
+    "tenantName": "Jordan Miller",
+    "tenantEmail": "tudor@ancasholdings.com",
+    "tenantPhone": "(773) 555-0199",
+    "propertyAddress": "1420 N Milwaukee Ave, Chicago, IL",
+    "unitNumber": "Unit 3B",
+    "maintenanceType": "Plumbing (Leak, Drip, Drain Clog, Toilet, Fixture)",
+    "urgencyLevel": "urgent",
+    "locationInUnit": "Master Bathroom under sink",
+    "description": "Pipe leaking under the sink, small drip onto towel.",
+    "permissionToEnter": "Yes - Permission granted to enter",
+    "preferredTime": "Morning (8 AM - 12 PM)",
+    "photoUrls": [],
+    "serverReceivedAt": "2026-10-29T16:58:45.056Z"
+  },
+  {
     "ticketId": "ANC-2026-TEST1",
     "submittedAt": "Oct 29, 2026, 9:25 AM",
     "tenantName": "Alex Morgan",

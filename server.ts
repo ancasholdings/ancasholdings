@@ -6,10 +6,13 @@ import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config();
+if (!process.env.SMTP_PASS && !process.env.GMAIL_APP_PASS) {
+  dotenv.config({ path: path.resolve(__dirname, '.env.example') });
+}
 
 async function startServer() {
   const app = express();
@@ -118,23 +121,35 @@ async function startServer() {
     fromName?: string;
     replyTo?: string;
   }): Promise<{ success: boolean; method: string; detail?: string }> {
-    const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS;
-    const smtpUser = process.env.SMTP_USER || 'tudor@ancasholdings.com';
-    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const rawPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS || '';
+    const smtpPass = rawPass.trim().replace(/\s+/g, '');
+    const smtpUser = (process.env.SMTP_USER || 'tudor@ancasholdings.com').trim();
+    const smtpHost = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
     const smtpPort = Number(process.env.SMTP_PORT) || 465;
 
     // Method 1: Authenticated SMTP (Direct Gmail / Google Workspace delivery)
     if (smtpPass) {
       try {
-        const transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass
-          }
-        });
+        const isGmail = smtpHost.includes('gmail');
+        const transporter = nodemailer.createTransport(
+          isGmail
+            ? {
+                service: 'gmail',
+                auth: {
+                  user: smtpUser,
+                  pass: smtpPass
+                }
+              }
+            : {
+                host: smtpHost,
+                port: smtpPort,
+                secure: smtpPort === 465,
+                auth: {
+                  user: smtpUser,
+                  pass: smtpPass
+                }
+              }
+        );
         const info = await transporter.sendMail({
           from: `"${fromName || 'Ancas Holdings'}" <${smtpUser}>`,
           to,
