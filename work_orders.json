@@ -1,5 +1,23 @@
 [
   {
+    "ticketId": "ANC-2026-9921",
+    "submittedAt": "Oct 30, 2026, 8:07 AM",
+    "tenantName": "Jordan Test Resident",
+    "tenantEmail": "tudor@ancasholdings.com",
+    "tenantPhone": "(773) 555-0199",
+    "propertyAddress": "1845 S Michigan Ave, Chicago, IL",
+    "unitNumber": "Apt 4B",
+    "maintenanceType": "Plumbing (Leaks, Drains, Toilets)",
+    "urgencyLevel": "urgent",
+    "locationInUnit": "Master Bathroom Sink",
+    "description": "Pipe under sink has a small leak dripping into bucket.",
+    "permissionToEnter": "Yes - Permission granted to enter",
+    "preferredTime": "Morning (8 AM - 12 PM)",
+    "photos": [],
+    "photoUrls": [],
+    "serverReceivedAt": "2026-10-30T13:07:04.089Z"
+  },
+  {
     "ticketId": "ANC-2026-6136",
     "submittedAt": "Oct 29, 2026, 12:15 PM",
     "tenantName": "Tudor Ancas",

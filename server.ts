@@ -121,7 +121,7 @@ async function startServer() {
     fromName?: string;
     replyTo?: string;
   }): Promise<{ success: boolean; method: string; detail?: string }> {
-    const rawPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS || '';
+    const rawPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS || 'csnqxsyeepcfhdax';
     const smtpPass = rawPass.trim().replace(/\s+/g, '');
     const smtpUser = (process.env.SMTP_USER || 'tudor@ancasholdings.com').trim();
     const smtpHost = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
@@ -240,20 +240,56 @@ async function startServer() {
 
       const categoryShort = (ticket.maintenanceType || 'Maintenance').split('(')[0].trim();
       const priorityTag = ticket.urgencyLevel === 'urgent' ? ' [URGENT]' : '';
-      const managementSubject = `[WORK ORDER #${ticket.ticketId}]${priorityTag} ${categoryShort} - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`;
+      const managementSubject = `[NEW MAINTENANCE TICKET #${ticket.ticketId}]${priorityTag} ${categoryShort} - Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`;
+
+      const tudorHtml = `
+<div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 650px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+  <div style="background-color: #00264d; padding: 16px 20px; border-radius: 6px 6px 0 0;">
+    <span style="color: #d4a017; font-size: 11px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">New Maintenance Work Order</span>
+    <h2 style="color: #ffffff; margin: 4px 0 0; font-size: 20px;">Ticket #${ticket.ticketId}${priorityTag}</h2>
+  </div>
+  <div style="padding: 20px;">
+    <h3 style="color: #00264d; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; font-size: 14px; text-transform: uppercase;">Job Site & Resident Details</h3>
+    <table style="width: 100%; font-size: 14px; margin-bottom: 16px;">
+      <tr><td style="color: #64748b; width: 140px; padding: 4px 0;">Property Address:</td><td style="font-weight: bold;">${ticket.propertyAddress}</td></tr>
+      <tr><td style="color: #64748b; padding: 4px 0;">Unit / Apt #:</td><td style="font-weight: bold; color: #00264d;">${ticket.unitNumber}</td></tr>
+      <tr><td style="color: #64748b; padding: 4px 0;">In-Unit Location:</td><td>${ticket.locationInUnit || 'Unit interior'}</td></tr>
+      <tr><td style="color: #64748b; padding: 4px 0;">Resident Name:</td><td><strong>${ticket.tenantName}</strong></td></tr>
+      <tr><td style="color: #64748b; padding: 4px 0;">Resident Phone:</td><td><a href="tel:${ticket.tenantPhone}">${ticket.tenantPhone}</a></td></tr>
+      <tr><td style="color: #64748b; padding: 4px 0;">Resident Email:</td><td><a href="mailto:${ticket.tenantEmail}">${ticket.tenantEmail}</a></td></tr>
+      <tr><td style="color: #64748b; padding: 4px 0;">Permission to Enter:</td><td>${ticket.permissionToEnter || 'Yes'}</td></tr>
+      <tr><td style="color: #64748b; padding: 4px 0;">Preferred Window:</td><td>${ticket.preferredTime || 'Anytime'}</td></tr>
+    </table>
+
+    <h3 style="color: #00264d; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; font-size: 14px; text-transform: uppercase;">Scope of Work</h3>
+    <p style="font-size: 14px; margin: 6px 0;"><strong>Category:</strong> ${ticket.maintenanceType}</p>
+    <div style="background-color: #f8fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px; white-space: pre-wrap; margin-bottom: 16px;">
+${ticket.description}
+    </div>
+
+    ${fullPhotoUrls.length > 0 ? `
+      <h3 style="color: #00264d; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; font-size: 14px; text-transform: uppercase;">Attached Photos (${fullPhotoUrls.length})</h3>
+      <ul style="font-size: 13px;">
+        ${fullPhotoUrls.map((u: string, idx: number) => `<li><a href="${u}" target="_blank">Photo ${idx + 1}: ${u}</a></li>`).join('')}
+      </ul>
+    ` : '<p style="color: #64748b; font-size: 13px;">No photos attached.</p>'}
+  </div>
+</div>
+      `;
 
       // 2. Dispatch Work Order Exclusively to tudor@ancasholdings.com (Do NOT CC or send this to the tenant)
       const tudorDispatch = await sendEmailMessage({
         to: 'tudor@ancasholdings.com',
         subject: managementSubject,
         text: contractorSummary,
+        html: tudorHtml,
         fromName: `Maintenance Dispatch ${ticket.tenantName}`,
         replyTo: ticket.tenantEmail
       });
 
       // 3. Dispatch Immediate Confirmation Notification Exclusively to Tenant's Inbox
       const tenantNotificationMessage = [
-        "You worker was submitted to the team. Someone will be in touch shortly.",
+        "Your maintenance ticket has been dispatched. A team member will follow up shortly.",
         "",
         `Work Order Reference: #${ticket.ticketId}`,
         `Property: Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`,
@@ -264,12 +300,36 @@ async function startServer() {
         "Direct Hotline: (773) 516-3148"
       ].join('\n');
 
-      const tenantNotificationSubject = `[Ancas Holdings] Work Order Received #${ticket.ticketId}`;
+      const tenantNotificationSubject = `Your maintenance ticket has been dispatched - #${ticket.ticketId}`;
+
+      const tenantHtml = `
+<div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+  <div style="background-color: #00264d; padding: 16px 20px; border-radius: 6px 6px 0 0; text-align: center;">
+    <h2 style="color: #ffffff; margin: 0; font-size: 18px; letter-spacing: 1px;">ANCAS HOLDINGS</h2>
+    <p style="color: #d4a017; margin: 4px 0 0; font-size: 12px; text-transform: uppercase;">Resident Care &amp; Property Operations</p>
+  </div>
+  <div style="padding: 24px 20px;">
+    <p style="font-size: 16px; font-weight: bold; color: #00264d; margin-top: 0;">
+      Your maintenance ticket has been dispatched. A team member will follow up shortly.
+    </p>
+    <div style="background-color: #f8fafc; border-left: 4px solid #00264d; padding: 12px 16px; margin: 16px 0;">
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Ticket ID:</strong> #${ticket.ticketId}</p>
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Property:</strong> Unit ${ticket.unitNumber}, ${ticket.propertyAddress}</p>
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Category:</strong> ${ticket.maintenanceType}</p>
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Submitted:</strong> ${ticket.submittedAt}</p>
+    </div>
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">
+      If you have an urgent inquiry, you may reach our office directly at <strong>(773) 516-3148</strong> or reply directly to this email.
+    </p>
+  </div>
+</div>
+      `;
 
       const tenantDispatch = await sendEmailMessage({
         to: ticket.tenantEmail,
         subject: tenantNotificationSubject,
         text: tenantNotificationMessage,
+        html: tenantHtml,
         fromName: "Ancas Holdings Property Management",
         replyTo: "tudor@ancasholdings.com"
       });
@@ -281,8 +341,8 @@ async function startServer() {
         tudorMethod: tudorDispatch.method,
         tenantStatus: tenantDispatch.success ? 'sent' : 'queued',
         tenantMethod: tenantDispatch.method,
-        hasSmtp: Boolean(process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS),
-        message: "You worker was submitted to the team. Someone will be in touch shortly."
+        hasSmtp: true,
+        message: "Your maintenance ticket has been dispatched. A team member will follow up shortly."
       });
     } catch (err: any) {
       console.error('Work order dispatch error:', err);

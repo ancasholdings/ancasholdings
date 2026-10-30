@@ -288,13 +288,13 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
 
       return {
         status: "success" as const,
-        message: `You worker was submitted to the team. Someone will be in touch shortly.`
+        message: `Your maintenance ticket has been dispatched. A team member will follow up shortly.`
       };
     } catch (err: any) {
       console.warn("Transmission warning:", err);
       return {
         status: "success" as const,
-        message: `You worker was submitted to the team. Someone will be in touch shortly.`
+        message: `Your maintenance ticket has been dispatched. A team member will follow up shortly.`
       };
     }
   };
@@ -603,10 +603,10 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-emerald-950">
-                      &ldquo;Your work order was received by the Ancas Holdings team. A team member will be in touch shortly.&rdquo;
+                      &ldquo;Your maintenance ticket has been dispatched. A team member will follow up shortly.&rdquo;
                     </p>
                     <p className="text-xs text-emerald-800 leading-relaxed">
-                      This notification has been dispatched to <span className="font-semibold text-emerald-950">{submittedTicket.tenantEmail}</span>. The complete maintenance work order and photos were routed exclusively to management (<span className="font-semibold text-emerald-950">tudor@ancasholdings.com</span>).
+                      This confirmation email has been dispatched to <span className="font-semibold text-emerald-950">{submittedTicket.tenantEmail}</span>. The complete maintenance work order and photos were routed directly to <span className="font-semibold text-emerald-950">tudor@ancasholdings.com</span>.
                     </p>
                     <p className="text-[11px] text-emerald-700/90 italic pt-1">
                       A confirmation email has been dispatched to your inbox. Please check your inbox (and spam folder). You can also click &ldquo;Send Direct Email to Tudor&rdquo; or &ldquo;Print Receipt&rdquo; for your records.
