@@ -1,5 +1,22 @@
 [
   {
+    "ticketId": "WO-ENV-TEST-01",
+    "submittedAt": "October 30, 2026, 09:14 AM",
+    "urgencyLevel": "standard",
+    "propertyAddress": "1244 S Avers Ave, Chicago, IL 60623",
+    "unitNumber": "Apt 2B",
+    "locationInUnit": "Kitchen",
+    "tenantName": "Jordan Miller",
+    "tenantPhone": "(312) 555-0199",
+    "tenantEmail": "tudor@ancasholdings.com",
+    "permissionToEnter": "Yes - Any time between 8am-5pm",
+    "preferredTime": "Morning (8am - 12pm)",
+    "maintenanceType": "Plumbing",
+    "problemDescription": "Kitchen sink faucet handles are loose and dripping slightly.",
+    "photos": [],
+    "serverReceivedAt": "2026-10-30T13:13:41.358Z"
+  },
+  {
     "ticketId": "ANC-2026-9921",
     "submittedAt": "Oct 30, 2026, 8:07 AM",
     "tenantName": "Jordan Test Resident",

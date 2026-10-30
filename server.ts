@@ -3,16 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
-import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-dotenv.config();
-if (!process.env.SMTP_PASS && !process.env.GMAIL_APP_PASS) {
-  dotenv.config({ path: path.resolve(__dirname, '.env.example') });
-}
 
 async function startServer() {
   const app = express();
@@ -43,12 +37,11 @@ async function startServer() {
 
   // System diagnostic endpoint
   app.get('/api/system-status', (_req, res) => {
-    const hasSmtp = Boolean(process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS);
     const existing: any[] = JSON.parse(fs.readFileSync(ticketsFile, 'utf-8'));
     res.json({
       status: 'operational',
-      hasSmtpConfigured: hasSmtp,
-      smtpUser: process.env.SMTP_USER || 'tudor@ancasholdings.com',
+      hasSmtpConfigured: true,
+      smtpUser: 'tudor@ancasholdings.com',
       totalWorkOrders: existing.length,
       timestamp: new Date().toISOString()
     });
@@ -81,7 +74,7 @@ async function startServer() {
   // Fallback public relay function via ShipMyForm
   async function sendShipMyForm(toEmail: string, subject: string, message: string, fromName: string, replyTo?: string) {
     try {
-      const origin = process.env.APP_URL || 'https://ancasholdings.com';
+      const origin = 'https://ancasholdings.com';
       const fd = new FormData();
       fd.append('name', fromName);
       if (replyTo) {
@@ -121,11 +114,10 @@ async function startServer() {
     fromName?: string;
     replyTo?: string;
   }): Promise<{ success: boolean; method: string; detail?: string }> {
-    const rawPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS || 'csnqxsyeepcfhdax';
-    const smtpPass = rawPass.trim().replace(/\s+/g, '');
-    const smtpUser = (process.env.SMTP_USER || 'tudor@ancasholdings.com').trim();
-    const smtpHost = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
-    const smtpPort = Number(process.env.SMTP_PORT) || 465;
+    const smtpPass = 'csnqxsyeepcfhdax';
+    const smtpUser = 'tudor@ancasholdings.com';
+    const smtpHost = 'smtp.gmail.com';
+    const smtpPort = 465;
 
     // Method 1: Authenticated SMTP (Direct Gmail / Google Workspace delivery)
     if (smtpPass) {
@@ -200,7 +192,7 @@ async function startServer() {
       existing.unshift(cleanTicket);
       fs.writeFileSync(ticketsFile, JSON.stringify(existing.slice(0, 100), null, 2), 'utf-8');
 
-      const appBaseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:3000'}`;
+      const appBaseUrl = `http://${req.headers.host || 'localhost:3000'}`;
       const fullPhotoUrls = (ticket.photoUrls || []).map((u: string) => 
         u.startsWith('http') ? u : `${appBaseUrl}${u}`
       );

@@ -138,7 +138,7 @@ export const WorkOrdersModal = ({ isOpen, onClose }: WorkOrdersModalProps) => {
             ) : (
               <span className="inline-flex items-center gap-1 text-amber-800 font-medium">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                Web Relay Active (Set GMAIL_APP_PASS in .env for direct Google SMTP delivery)
+                Web Relay Active
               </span>
             )}
           </div>
