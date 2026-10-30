@@ -257,7 +257,15 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
         }
       }
 
-      // Clean photo metadata to prevent sending multi-megabyte base64 blobs in the request body
+      // Prepare attachments with full image data for direct email attachment delivery
+      const attachmentsForEmail = (photoList || [])
+        .filter((p) => Boolean(p.dataUrl))
+        .map((p) => ({
+          name: p.name,
+          dataUrl: p.dataUrl
+        }));
+
+      // Clean photo metadata for local record storage
       const cleanPhotos = (photoList || []).map((p) => ({
         id: p.id,
         name: p.name,
@@ -271,7 +279,8 @@ export const TenantsPortal = ({ onBackToHome }: TenantsPortalProps) => {
         body: JSON.stringify({
           ...ticket,
           photos: cleanPhotos,
-          photoUrls: uploadedPhotoUrls
+          photoUrls: uploadedPhotoUrls,
+          attachments: attachmentsForEmail
         })
       });
 

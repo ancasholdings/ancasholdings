@@ -39,7 +39,8 @@ async function sendEmailMessage({
   text,
   html,
   fromName,
-  replyTo
+  replyTo,
+  attachments
 }: {
   to: string;
   subject: string;
@@ -47,6 +48,12 @@ async function sendEmailMessage({
   html?: string;
   fromName?: string;
   replyTo?: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+    cid?: string;
+  }>;
 }): Promise<{ success: boolean; method: string; detail?: string }> {
   try {
     const transporter = nodemailer.createTransport({
@@ -59,15 +66,21 @@ async function sendEmailMessage({
     });
 
     const cleanFromName = fromName ? fromName.replace(/[\[\]]/g, '').trim() : 'Ancas Holdings';
-    const info = await transporter.sendMail({
+    const mailOptions: any = {
       from: `"${cleanFromName}" <${SMTP_USER}>`,
       to,
       replyTo: replyTo || SMTP_USER,
       subject,
       text,
       html: html || text.replace(/\n/g, '<br/>')
-    });
-    console.log(`[SMTP DELIVERED] Successfully sent email to ${to} (Message ID: ${info.messageId})`);
+    };
+
+    if (attachments && attachments.length > 0) {
+      mailOptions.attachments = attachments;
+    }
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[SMTP DELIVERED] Successfully sent email to ${to} with ${attachments?.length || 0} attachment(s) (Message ID: ${info.messageId})`);
     return { success: true, method: 'smtp', detail: info.messageId };
   } catch (smtpErr: any) {
     console.error(`[SMTP ERROR] Could not send email via SMTP to ${to}:`, smtpErr.message);
@@ -103,7 +116,7 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Missing required ticket data' });
     }
 
-    // Persist ticket to file store
+    // Persist ticket to file store without heavy base64 blobs
     const cleanPhotos = (ticket.photos || []).map((p: any) => ({
       id: p.id,
       name: p.name,
@@ -112,6 +125,7 @@ export default async function handler(req: any, res: any) {
     const cleanTicket = {
       ...ticket,
       photos: cleanPhotos,
+      attachments: undefined,
       serverReceivedAt: new Date().toISOString()
     };
 
@@ -147,6 +161,73 @@ export default async function handler(req: any, res: any) {
       u.startsWith('http') || u.startsWith('data:') ? u : `${appBaseUrl}${u}`
     );
 
+    // Collect and build real binary email attachments from request data
+    const emailAttachments: Array<{
+      filename: string;
+      content: Buffer;
+      contentType: string;
+      cid: string;
+    }> = [];
+
+    const rawAttachments = [
+      ...(Array.isArray(ticket.attachments) ? ticket.attachments : []),
+      ...(Array.isArray(ticket.photos) ? ticket.photos : [])
+    ];
+
+    rawAttachments.forEach((att: any, idx: number) => {
+      if (att && att.dataUrl && typeof att.dataUrl === 'string' && att.dataUrl.startsWith('data:')) {
+        const matches = att.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (matches) {
+          const contentType = matches[1] || 'image/jpeg';
+          const ext = contentType.split('/')[1] || 'jpg';
+          const filename = att.name || `photo-${idx + 1}.${ext}`;
+          if (!emailAttachments.some(a => a.filename === filename)) {
+            emailAttachments.push({
+              filename,
+              content: Buffer.from(matches[2], 'base64'),
+              contentType,
+              cid: `photo_cid_${idx + 1}`
+            });
+          }
+        }
+      }
+    });
+
+    // Also check local uploads referenced in photoUrls
+    (ticket.photoUrls || []).forEach((u: string, idx: number) => {
+      if (typeof u === 'string') {
+        if (u.startsWith('/uploads/')) {
+          const localPath = path.resolve(process.cwd(), 'public', u.replace(/^\//, ''));
+          if (fs.existsSync(localPath)) {
+            const filename = path.basename(localPath);
+            if (!emailAttachments.some(a => a.filename === filename)) {
+              emailAttachments.push({
+                filename,
+                content: fs.readFileSync(localPath),
+                contentType: 'image/jpeg',
+                cid: `photo_upload_${idx + 1}`
+              });
+            }
+          }
+        } else if (u.startsWith('data:')) {
+          const matches = u.match(/^data:([^;]+);base64,(.+)$/);
+          if (matches) {
+            const contentType = matches[1] || 'image/jpeg';
+            const ext = contentType.split('/')[1] || 'jpg';
+            const filename = `photo-upload-${idx + 1}.${ext}`;
+            if (!emailAttachments.some(a => a.filename === filename)) {
+              emailAttachments.push({
+                filename,
+                content: Buffer.from(matches[2], 'base64'),
+                contentType,
+                cid: `photo_upload_${idx + 1}`
+              });
+            }
+          }
+        }
+      }
+    });
+
     // Build Contractor / Management Work Order Summary (Exclusively for tudor@ancasholdings.com)
     const contractorSummary = [
       "============================================================",
@@ -174,8 +255,8 @@ export default async function handler(req: any, res: any) {
       ticket.description,
       "",
       "--- ATTACHED MEDIA & PHOTOS ---",
-      fullPhotoUrls.length > 0
-        ? fullPhotoUrls.map((url: string, i: number) => `Photo ${i + 1}: ${url}`).join('\n')
+      emailAttachments.length > 0
+        ? emailAttachments.map((att, i) => `Attachment ${i + 1}: ${att.filename} (${(att.content.length / 1024).toFixed(1)} KB)`).join('\n')
         : "No photos uploaded.",
       "============================================================"
     ].join('\n');
@@ -209,7 +290,27 @@ export default async function handler(req: any, res: any) {
 ${ticket.description}
     </div>
 
-    ${fullPhotoUrls.length > 0 ? `
+    ${emailAttachments.length > 0 ? `
+      <h3 style="color: #00264d; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; font-size: 14px; text-transform: uppercase;">
+        Attached Photos (${emailAttachments.length} file${emailAttachments.length > 1 ? 's' : ''})
+      </h3>
+      <div style="background-color: #f1f5f9; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+        <p style="margin: 0 0 8px 0; font-size: 13px; color: #00264d; font-weight: bold;">
+          📎 ${emailAttachments.length} photo${emailAttachments.length > 1 ? 's are' : ' is'} attached directly to this email:
+        </p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #334155;">
+          ${emailAttachments.map((att) => `<li><strong>${att.filename}</strong> (${(att.content.length / 1024).toFixed(1)} KB)</li>`).join('')}
+        </ul>
+      </div>
+      <div style="margin-top: 12px;">
+        ${emailAttachments.map((att) => `
+          <div style="margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background-color: #ffffff; text-align: center;">
+            <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b; font-weight: bold;">${att.filename}</p>
+            <img src="cid:${att.cid}" alt="${att.filename}" style="max-width: 100%; max-height: 400px; border-radius: 4px; display: inline-block;" />
+          </div>
+        `).join('')}
+      </div>
+    ` : fullPhotoUrls.length > 0 ? `
       <h3 style="color: #00264d; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; font-size: 14px; text-transform: uppercase;">Attached Photos (${fullPhotoUrls.length})</h3>
       <ul style="font-size: 13px;">
         ${fullPhotoUrls.map((u: string, idx: number) => `<li><a href="${u}" target="_blank">Photo ${idx + 1}: ${u}</a></li>`).join('')}
@@ -219,14 +320,15 @@ ${ticket.description}
 </div>
     `;
 
-    // 2. Dispatch Work Order Exclusively to tudor@ancasholdings.com
+    // 2. Dispatch Work Order with binary photo attachments Exclusively to tudor@ancasholdings.com
     const tudorDispatch = await sendEmailMessage({
       to: 'tudor@ancasholdings.com',
       subject: managementSubject,
       text: contractorSummary,
       html: tudorHtml,
       fromName: `Maintenance Dispatch ${ticket.tenantName}`,
-      replyTo: ticket.tenantEmail
+      replyTo: ticket.tenantEmail,
+      attachments: emailAttachments
     });
 
     // 3. Dispatch Immediate Confirmation Notification Exclusively to Tenant's Inbox
@@ -237,10 +339,11 @@ ${ticket.description}
       `Property: Unit ${ticket.unitNumber}, ${ticket.propertyAddress}`,
       `Classification: ${ticket.maintenanceType}`,
       `Submitted: ${ticket.submittedAt}`,
+      emailAttachments.length > 0 ? `Photos Attached: ${emailAttachments.length} image(s)` : "",
       "",
       "Ancas Holdings Property Management",
       "Direct Hotline: (773) 516-3148"
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 
     const tenantNotificationSubject = `Your maintenance ticket has been dispatched - #${ticket.ticketId}`;
 
@@ -259,6 +362,7 @@ ${ticket.description}
       <p style="margin: 4px 0; font-size: 14px;"><strong>Property:</strong> Unit ${ticket.unitNumber}, ${ticket.propertyAddress}</p>
       <p style="margin: 4px 0; font-size: 14px;"><strong>Category:</strong> ${ticket.maintenanceType}</p>
       <p style="margin: 4px 0; font-size: 14px;"><strong>Submitted:</strong> ${ticket.submittedAt}</p>
+      ${emailAttachments.length > 0 ? `<p style="margin: 4px 0; font-size: 14px; color: #00264d;"><strong>Photos Attached:</strong> 📎 ${emailAttachments.length} file${emailAttachments.length > 1 ? 's' : ''}</p>` : ''}
     </div>
     <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">
       If you have an urgent inquiry, you may reach our office directly at <strong>(773) 516-3148</strong> or reply directly to this email.
@@ -273,7 +377,8 @@ ${ticket.description}
       text: tenantNotificationMessage,
       html: tenantHtml,
       fromName: "Ancas Holdings Property Management",
-      replyTo: "tudor@ancasholdings.com"
+      replyTo: "tudor@ancasholdings.com",
+      attachments: emailAttachments
     });
 
     return res.status(200).json({
@@ -284,6 +389,7 @@ ${ticket.description}
       tenantStatus: tenantDispatch.success ? 'sent' : 'queued',
       tenantMethod: tenantDispatch.method,
       hasSmtp: true,
+      attachmentsCount: emailAttachments.length,
       message: "Your maintenance ticket has been dispatched. A team member will follow up shortly."
     });
   } catch (err: any) {
