@@ -1,6 +1,0 @@
-{
-  "summary":  "Architectural blueprint and implementation plan for transforming the Tenants page into a dual-sided Tenant & Property Management Portal. Includes tenant lease management, rent ledger, maintenance dispatch tracking, and landlord portfolio administration.",
-  "updatedAt":  "2026-10-25T19:54:00.705047561Z",
-  "requestFeedback":  true,
-  "userFacing":  true
-}
